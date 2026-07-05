@@ -7,8 +7,8 @@
 A floating macOS dashboard for **working better with LLMs in terminal
 sessions**, styled as a vintage Italian grand tourer's instrument cowl. Live
 gauges show what your model is actually doing — generation speed (tok/s),
-sustained load (RPM), context "fuel level", running cost, tokens travelled and
-lines of code as odometer mileage — and physical-looking controls let you
+sustained reasoning load (RPM), context "fuel level", tokens travelled on a
+true roller odometer and lines of code as the trip counter — and physical-looking controls let you
 **shift gears** (switch models), hit **OVERDRIVE**, flip **skill switches**,
 and pull the **wiper stalk** to clean your context, all without touching the
 terminal. Built for Claude Code today; other engines later (see
@@ -18,7 +18,7 @@ terminal. Built for Claude Code today; other engines later (see
       ┌──────────────────────────────────────────────────┐
       │  ◜ TACHIMETRO ◝     COWL · GT     ◜ CONTAGIRI ◝  │
       │   tok/s + odometer   ─────────     gen. load     │
-      │   ◜FUEL◝ (context)   ◜ MOTORE ◝   ◜COST◝ ($)     │
+      │  ◜FUEL◝ (context)  ◜ ENGINE ◝  [TOKENS odometer] │
       │                                                  │
       │   [1][2][3][4][5][6][7]        ⚡ OVERDRIVE       │
       │      gear shifter                                │
@@ -158,12 +158,12 @@ Test-run any time with `cd ~/.claude/dashboard && npm start`.
 
 ## Configure
 
-**Language.** The chrome plate labels speak four languages — set `"language"`
-in `config.json` to `it` (default), `en`, `pt` or `es`, or just pick one from
-the in-app ⚙ panel. The enamel gauge faces stay Italian on purpose: a vintage
-Italian instrument exported abroad still says *benzina* on the dial.
-User-configurable labels (gears, switches, the wiper plate) are yours to
-write in any language.
+**Language.** Every label — chrome plates *and* the enamel gauge-face
+engravings — speaks four languages with AI-native nomenclature (*generation
+speed*, *context*, *reasoning*, *sustained gen. load*): set `"language"` in
+`config.json` to `it` (default), `en`, `pt` or `es`, or pick one from the
+in-app ⚙ panel. Custom labels you write yourself (gears, switches, a custom
+wiper plate) stay exactly as engraved.
 
 
 Everything is editable in `~/.claude/dashboard/config.json` (seeded from
