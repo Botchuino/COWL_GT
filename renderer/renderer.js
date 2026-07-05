@@ -257,12 +257,16 @@ const gaugeFuel = buildGauge($('#gauge-fuel'), {
   valY: G.cy + 40, valSize: 20, initialText: '100%',
   numFor: (f) => (f === 0 ? 'E' : f === 1 ? 'F' : '½'),
 });
+/* TOKEN counter: same enamel face for visual coherence, but it's a counter,
+   not a dial — the needle is hidden and the roller odometer (moved here from
+   the tach) shows total tokens; session $ lives on the line beneath. */
 const gaugeSpend = buildGauge($('#gauge-spend'), {
-  id: 'gs', majors: 10, minorGroup: 2, labelEvery: 2, numSize: 17,
-  redFrom: 0.85, faceLabel: 'spesa', faceLabelY: G.cy - 32, faceLabelSize: 15,
-  valY: G.cy + 40, valSize: 18, initialText: '$0.00',
-  numFor: (f) => '$' + Math.round(f * SPEND_MAX),
+  id: 'gs', majors: 10, minorGroup: 2, labelEvery: 0, numSize: 17,
+  faceLabel: 'token', faceLabelY: G.cy - 32, faceLabelSize: 15,
+  valY: G.cy + 46, valSize: 11, initialText: 'in + out',
+  numFor: () => '',
 });
+if (gaugeSpend.needle) gaugeSpend.needle.setAttribute('display', 'none');
 
 /* =====================================================================
    1b. ROLLER ODOMETER (km percorsi = tokensIn + tokensOut)
@@ -431,10 +435,11 @@ function applyState(state) {
   if (gaugeFuel.valText) gaugeFuel.valText.textContent = `${Math.round(free)}%`;
   setRiserva(free);
 
-  // SPESA (exact dollars, as before)
+  // TOKEN counter face is driven by the roller odometer (see updateOdometer);
+  // session $ goes on the small line beneath the counter.
   const cost = Math.max(0, Number(state.costUsd) || 0);
-  pointGauge(gaugeSpend, cost / SPEND_MAX);
-  if (gaugeSpend.valText) gaugeSpend.valText.textContent = '$' + cost.toFixed(cost >= 100 ? 0 : 2);
+  const spendLine = $('#spend-line .riserva-text');
+  if (spendLine) spendLine.textContent = '≈ $' + cost.toFixed(cost >= 100 ? 0 : 2);
 
   // model crest
   const nameEl = $('#model-name'), subEl = $('#model-sub');
@@ -526,7 +531,7 @@ function applyActivity(activity) {
 
   const tool = String(activity.tool || '');
   const detail = String(activity.detail || '');
-  const key = tool + ' ' + detail + ' ' + at;
+  const key = tool + '\u0000' + detail + '\u0000' + at;
   strip.classList.add('fresh');
   glyphEl.textContent = glyphForTool(tool);
   detailEl.textContent = detail || tool || '—';

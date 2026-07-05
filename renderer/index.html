@@ -114,30 +114,28 @@
     <!-- translucent wiper-sweep overlay, animated when the wiper fires -->
     <div id="wiper-sweep" class="wiper-sweep" aria-hidden="true"><span class="ws-blade"></span></div>
 
-    <!-- TACHIMETRO: tokens per second, with roller odometer + LoC trip -->
-    <div class="gauge-wrap gauge-wrap--big">
+    <!-- TACHIMETRO: tokens per second + LoC trip -->
+    <div class="gauge-wrap gauge-wrap--big gauge-wrap--tach">
       <div class="gauge gauge--big">
         <div id="gauge-tach" class="gauge-svg" role="img" aria-label="Tachimetro: tokens per second"></div>
-        <div id="odo-wheels" class="odo-wheels" aria-label="Token odometer: total tokens in and out"
-             title="Km percorsi — total tokens (in + out)"></div>
         <div id="trip-loc" class="trip-loc" aria-label="Trip counter: lines of code added and removed"
              title="Trip — lines of code added / removed">
           <span id="trip-add" class="trip-add">+0</span><span id="trip-del" class="trip-del">−0</span>
         </div>
       </div>
-      <div class="gauge-caption">TACHIMETRO</div>
+      <div class="gauge-caption">TACHIMETRO · TOK/S</div>
     </div>
 
-    <!-- BENZINA: context fuel (F = empty context) + RISERVA jewel -->
+    <!-- CONTESTO: context fuel (F = empty context) + RISERVA jewel -->
     <div class="gauge-wrap gauge-wrap--small">
       <div class="gauge gauge--small">
-        <div id="gauge-fuel" class="gauge-svg" role="img" aria-label="Benzina: free context remaining"></div>
+        <div id="gauge-fuel" class="gauge-svg" role="img" aria-label="Contesto: free context remaining"></div>
       </div>
       <div id="riserva" class="riserva" role="status" aria-label="Context reserve warning lamp">
         <span class="riserva-jewel" aria-hidden="true"></span>
         <span class="riserva-text">RISERVA</span>
       </div>
-      <div class="gauge-caption gauge-caption--small">BENZINA</div>
+      <div class="gauge-caption gauge-caption--small">CONTESTO</div>
     </div>
 
     <!-- centre maker's crest: current engine (model) -->
@@ -153,21 +151,24 @@
       </div>
     </div>
 
-    <!-- SPESA: session dollars -->
+    <!-- TOKEN: roller counter (total tokens in+out) with session $ beneath -->
     <div class="gauge-wrap gauge-wrap--small">
-      <div class="gauge gauge--small">
-        <div id="gauge-spend" class="gauge-svg" role="img" aria-label="Spesa: session spend gauge"></div>
+      <div class="gauge gauge--small gauge--counter">
+        <div id="gauge-spend" class="gauge-svg" role="img" aria-label="Token: total tokens counter"></div>
+        <div id="odo-wheels" class="odo-wheels" aria-label="Token odometer: total tokens in and out"
+             title="Km percorsi — total tokens (in + out)"></div>
       </div>
-      <div class="riserva riserva--spacer" aria-hidden="true"><span class="riserva-text">&nbsp;</span></div>
-      <div class="gauge-caption gauge-caption--small">SPESA</div>
+      <div id="spend-line" class="riserva riserva--spend" role="status" aria-label="Session spend"
+           title="Session spend"><span class="riserva-text">≈ $0</span></div>
+      <div class="gauge-caption gauge-caption--small">TOKEN</div>
     </div>
 
-    <!-- CONTAGIRI: sustained generation intensity -->
+    <!-- RAGIONAMENTO: sustained generation intensity -->
     <div class="gauge-wrap gauge-wrap--big">
       <div class="gauge gauge--big">
-        <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Contagiri: sustained generation intensity"></div>
+        <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Ragionamento: sustained generation intensity"></div>
       </div>
-      <div class="gauge-caption">CONTAGIRI</div>
+      <div class="gauge-caption">RAGIONAMENTO</div>
     </div>
   </section>
 
@@ -231,7 +232,7 @@
           </span>
         </div>
       </div>
-      <div id="wiper-plate" class="bay-plate">TERGI</div>
+      <div id="wiper-plate" class="bay-plate">OTTIMIZZA CONTESTO</div>
     </div>
 
     <div class="switch-bank" aria-label="Skill switches">
@@ -247,7 +248,7 @@
       <span class="ap-screw ap-screw--l" aria-hidden="true"></span>
       <span class="ap-text">
         <span class="ap-script">made by botchuino</span>
-        <span class="ap-sub">CARROZZERIA</span>
+        <span class="ap-sub">KVA LAB</span>
       </span>
       <span class="ap-screw ap-screw--r" aria-hidden="true"></span>
     </div>

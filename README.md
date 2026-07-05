@@ -27,7 +27,8 @@ terminal. Built for Claude Code today; other engines later (see
       └──────────────────────────────────────────────────┘
 ```
 
-![COWL_GT dashboard](docs/screenshot.png)
+> **Screenshot placeholder** — drop a real screenshot here:
+> `![COWL_GT dashboard](docs/screenshot.png)`
 
 **macOS only.** Made by botchuino.
 

@@ -358,6 +358,8 @@ html, body {
 }
 .gauge--big   { width: var(--gauge-big);   height: var(--gauge-big); }
 .gauge--small { width: var(--gauge-small); height: var(--gauge-small); }
+/* the TACHIMETRO is the hero instrument — slightly larger than the other big dial */
+.gauge-wrap--tach .gauge--big { width: calc(var(--gauge-big) * 1.12); height: calc(var(--gauge-big) * 1.12); }
 .gauge-svg { position: absolute; inset: 0; }
 .gauge-svg svg { width: 100%; height: 100%; display: block; }
 
@@ -404,9 +406,9 @@ html, body {
   padding: 2px 10px 1px;
 }
 
-/* ---- roller odometer, set into the tachimetro face ---- */
+/* ---- roller odometer, set into the TOKEN counter face ---- */
 .odo-wheels {
-  position: absolute; left: 50%; top: 61%;
+  position: absolute; left: 50%; top: 56%;
   transform: translate(-50%, -50%);
   display: flex; gap: 1px;
   padding: 3px 4px;
@@ -414,7 +416,7 @@ html, body {
   background: linear-gradient(180deg, #060402, #1a1207 50%, #060402);
   border: 1px solid rgba(0,0,0,0.75);
   box-shadow: inset 0 2px 3px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.25);
-  font-size: max(9px, calc(var(--gauge-big) * 0.066));
+  font-size: max(9px, calc(var(--gauge-small) * 0.105));
   line-height: 1;
   z-index: 2;
   pointer-events: auto;
@@ -437,13 +439,13 @@ html, body {
 .odo-strip { display: block; transition: transform .55s cubic-bezier(.25,.7,.2,1); will-change: transform; }
 .odo-strip > span { display: block; height: 1em; }
 
-/* ---- trip counter: lines of code, beneath the odometer ---- */
+/* ---- trip counter: lines of code, set into the tachimetro face ---- */
 .trip-loc {
-  position: absolute; left: 50%; top: 71.5%;
+  position: absolute; left: 50%; top: 64%;
   transform: translate(-50%, -50%);
   display: flex; gap: 0.7em;
   font-family: var(--font-mech); font-weight: 700;
-  font-size: max(8px, calc(var(--gauge-big) * 0.047));
+  font-size: max(9px, calc(var(--gauge-big) * 0.055));
   letter-spacing: 0.4px;
   z-index: 2;
   white-space: nowrap;
@@ -755,13 +757,13 @@ html, body {
   text-shadow: 0 -1px 0 rgba(0,0,0,0.7), 0 1px 1px rgba(255,240,210,0.15);
 }
 .gearpos .gp-label {
-  font-size: 10.5px; letter-spacing: 0.04em; font-weight: 700;
-  max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; letter-spacing: 0.04em; font-weight: 700;
+  max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gearpos .gp-sub {
   font-family: var(--font-italic); font-style: italic;
-  font-size: 10px; opacity: 0.8;
-  max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px; opacity: 0.9;
+  max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gearpos.reverse .gp-num { color: #e08a76; }
 .gearpos.engaged {
