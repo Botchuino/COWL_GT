@@ -250,14 +250,16 @@ lamp lights up: time to pull the TERGI stalk (`/compact` or `/clear`).
 
 ## Future work
 
-- **Other engines.** The cowl is engine-agnostic by design — keystroke
-  injection doesn't care what's running in the terminal. Planned: variants for
-  other terminal LLM CLIs (Codex CLI, Gemini CLI, opencode, …); each needs only
-  its own telemetry tap and a gear map.
+- **COWL for Codex CLI — next up.** The cowl is engine-agnostic by design:
+  keystroke injection doesn't care what's running in the terminal. A Codex CLI
+  variant is planned next (its own telemetry tap + gear map), with Gemini CLI,
+  opencode and friends to follow.
 - **VS Code extension.** A native COWL_GT extension: same gauge cluster in a
   webview panel, but driving the integrated terminal through
   `terminal.sendText()` — no Accessibility permission, no osascript, no focus
-  caveat. The cleanest possible transmission.
+  caveat. The cleanest possible transmission. (COWL already works with VS
+  Code today via its integrated terminal — target app `Code`, auto-launched
+  by the SessionStart hook.)
 - **More instruments** as richer session telemetry becomes available (active
   subagents, queue depth, per-turn timing).
 
