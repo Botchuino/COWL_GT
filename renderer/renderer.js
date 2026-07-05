@@ -21,6 +21,42 @@
    makes the shadowing legal. */
 (() => {
 
+
+/* =====================================================================
+   0b. I18N — plate/label translations (IT default). The enamel gauge
+   face engravings stay Italian on purpose: a vintage Italian instrument
+   exported abroad still says "benzina" on the dial. Only the chrome
+   plates and dynamic status strings translate.
+   ===================================================================== */
+const I18N = {
+  it: { tach_caption: 'TACHIMETRO · TOK/S', fuel_caption: 'CONTESTO', token_caption: 'TOKEN',
+        rpm_caption: 'RAGIONAMENTO', riserva: 'RISERVA', motore: 'MOTORE', rotta: 'ROTTA',
+        strada: 'la strada', cambio: 'CAMBIO', trasmissione: 'trasmissione', servizi: 'SERVIZI',
+        quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale' },
+  en: { tach_caption: 'SPEEDOMETER · TOK/S', fuel_caption: 'CONTEXT', token_caption: 'TOKENS',
+        rpm_caption: 'REASONING', riserva: 'RESERVE', motore: 'ENGINE', rotta: 'ROUTE',
+        strada: 'the road', cambio: 'GEARBOX', trasmissione: 'transmission', servizi: 'SERVICES',
+        quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal' },
+  pt: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
+        rpm_caption: 'RACIOCÍNIO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'ROTA',
+        strada: 'a estrada', cambio: 'CÂMBIO', trasmissione: 'transmissão', servizi: 'SERVIÇOS',
+        quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal' },
+  es: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
+        rpm_caption: 'RAZONAMIENTO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'RUTA',
+        strada: 'la carretera', cambio: 'CAMBIO', trasmissione: 'transmisión', servizi: 'SERVICIOS',
+        quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal' },
+};
+let LANG = 'it';
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.it[key] || key; }
+function applyI18n(lang) {
+  LANG = I18N[lang] ? lang : 'it';
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  const langSel = $('#cfg-language');
+  if (langSel) langSel.value = LANG;
+}
+
 /* ---- safe bridge: never throw if window.dash is absent ---- */
 const noop = () => {};
 const dash = window.dash || {
@@ -444,7 +480,7 @@ function applyState(state) {
   // model crest
   const nameEl = $('#model-name'), subEl = $('#model-sub');
   if (state.modelName) { nameEl.textContent = state.modelName; subEl.textContent = shortId(state.modelId); }
-  else { nameEl.textContent = '—'; subEl.textContent = 'no signal'; }
+  else { nameEl.textContent = '—'; subEl.textContent = t('no_signal'); }
 
   // trip counter: lines of code
   const added = Math.max(0, Math.round(Number(state.linesAdded) || 0));
@@ -524,7 +560,7 @@ function applyActivity(activity) {
     glyphEl.textContent = '◍';
     detailEl.textContent = '—';
     detailEl.title = '';
-    flagEl.textContent = 'in sosta';
+    flagEl.textContent = t('sosta');
     activityKey = null;
     return;
   }
@@ -536,7 +572,7 @@ function applyActivity(activity) {
   glyphEl.textContent = glyphForTool(tool);
   detailEl.textContent = detail || tool || '—';
   detailEl.title = (tool && detail) ? `${tool} — ${detail}` : (tool || detail);
-  flagEl.textContent = 'in viaggio…';
+  flagEl.textContent = t('viaggio');
 
   if (key !== activityKey) {
     activityKey = key;
@@ -937,6 +973,7 @@ async function saveConfigForm() {
   const next = JSON.parse(JSON.stringify(CONFIG)); // clone, preserve unknown keys
 
   next.targetTerminal = $('#cfg-terminal').value || 'auto';
+  next.language = ($('#cfg-language') && $('#cfg-language').value) || next.language || 'it';
 
   $('#cfg-gears').querySelectorAll('input').forEach((inp) => {
     const i = Number(inp.dataset.i);
@@ -957,6 +994,7 @@ async function saveConfigForm() {
     await dash.saveConfig(next);
     try { await dash.setTerminal(next.targetTerminal); } catch (_) {}
     CONFIG = next;
+    applyI18n(next.language);
     rebuildFromConfig();
     status.textContent = 'Stored.';
   } catch (e) {
@@ -1000,6 +1038,7 @@ async function boot() {
   // fallback config so the UI is never empty even before the bridge answers
   try { CONFIG = await dash.getConfig(); } catch (_) {}
   if (!CONFIG) CONFIG = FALLBACK_CONFIG;
+  applyI18n(CONFIG.language || 'it');
 
   buildGearbox(CONFIG.gears || []);
   buildSwitches(CONFIG.skillButtons || []);

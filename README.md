@@ -159,6 +159,14 @@ Test-run any time with `cd ~/.claude/dashboard && npm start`.
 
 ## Configure
 
+**Language.** The chrome plate labels speak four languages — set `"language"`
+in `config.json` to `it` (default), `en`, `pt` or `es`, or just pick one from
+the in-app ⚙ panel. The enamel gauge faces stay Italian on purpose: a vintage
+Italian instrument exported abroad still says *benzina* on the dial.
+User-configurable labels (gears, switches, the wiper plate) are yours to
+write in any language.
+
+
 Everything is editable in `~/.claude/dashboard/config.json` (seeded from
 `config.default.json` on first run) **or via the in-app config panel**. Map
 your **own** skills, slash commands, and MCP tools — the defaults are just a

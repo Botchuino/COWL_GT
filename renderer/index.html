@@ -123,7 +123,7 @@
           <span id="trip-add" class="trip-add">+0</span><span id="trip-del" class="trip-del">−0</span>
         </div>
       </div>
-      <div class="gauge-caption">TACHIMETRO · TOK/S</div>
+      <div class="gauge-caption" data-i18n="tach_caption">TACHIMETRO · TOK/S</div>
     </div>
 
     <!-- CONTESTO: context fuel (F = empty context) + RISERVA jewel -->
@@ -133,9 +133,9 @@
       </div>
       <div id="riserva" class="riserva" role="status" aria-label="Context reserve warning lamp">
         <span class="riserva-jewel" aria-hidden="true"></span>
-        <span class="riserva-text">RISERVA</span>
+        <span class="riserva-text" data-i18n="riserva">RISERVA</span>
       </div>
-      <div class="gauge-caption gauge-caption--small">CONTESTO</div>
+      <div class="gauge-caption gauge-caption--small" data-i18n="fuel_caption">CONTESTO</div>
     </div>
 
     <!-- centre maker's crest: current engine (model) -->
@@ -143,7 +143,7 @@
       <div id="model-badge" class="crest" role="status" aria-label="Current model">
         <div class="crest-ring">
           <div class="crest-face">
-            <div class="crest-topline">MOTORE</div>
+            <div class="crest-topline" data-i18n="motore">MOTORE</div>
             <div id="model-name" class="crest-model">—</div>
             <div id="model-sub" class="crest-sub">no signal</div>
           </div>
@@ -160,7 +160,7 @@
       </div>
       <div id="spend-line" class="riserva riserva--spend" role="status" aria-label="Session spend"
            title="Session spend"><span class="riserva-text">≈ $0</span></div>
-      <div class="gauge-caption gauge-caption--small">TOKEN</div>
+      <div class="gauge-caption gauge-caption--small" data-i18n="token_caption">TOKEN</div>
     </div>
 
     <!-- RAGIONAMENTO: sustained generation intensity -->
@@ -168,7 +168,7 @@
       <div class="gauge gauge--big">
         <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Ragionamento: sustained generation intensity"></div>
       </div>
-      <div class="gauge-caption">RAGIONAMENTO</div>
+      <div class="gauge-caption" data-i18n="rpm_caption">RAGIONAMENTO</div>
     </div>
   </section>
 
@@ -176,7 +176,7 @@
   <section class="waybar" aria-label="Route plate and activity strip">
     <div id="route-plate" class="route-plate" role="group" aria-label="Route plate: working directory, session and keystroke target">
       <span class="rp-clip rp-clip--l" aria-hidden="true"></span>
-      <span class="rp-label">ROTTA</span>
+      <span class="rp-label" data-i18n="rotta">ROTTA</span>
       <span id="route-cwd" class="route-cwd" title="">—</span>
       <span class="route-sep" aria-hidden="true">·</span>
       <span id="route-session" class="route-session" title="Session id">—</span>
@@ -186,7 +186,7 @@
     </div>
 
     <div id="activity-strip" class="activity-strip" role="status" aria-label="Latest tool activity">
-      <span class="as-label flourish">la strada</span>
+      <span class="as-label flourish" data-i18n="strada">la strada</span>
       <span id="activity-glyph" class="activity-glyph" aria-hidden="true">◍</span>
       <span id="activity-detail" class="activity-detail" title="">—</span>
       <span id="activity-flag" class="activity-flag flourish">in sosta</span>
@@ -196,7 +196,7 @@
   <!-- ============ GEAR SELECTOR (H-GATE) ============ -->
   <section class="gearbox" aria-label="Gear selector">
     <div class="gear-header">
-      <span class="engraved-title">CAMBIO <em class="flourish">trasmissione</em></span>
+      <span class="engraved-title"><span data-i18n="cambio">CAMBIO</span> <em class="flourish" data-i18n="trasmissione">trasmissione</em></span>
       <span id="gear-readout" class="gear-readout">N</span>
     </div>
     <div id="gearplate" class="gearplate">
@@ -237,13 +237,13 @@
 
     <div class="switch-bank" aria-label="Skill switches">
       <div id="switch-row" class="switch-row"><!-- toggles injected --></div>
-      <div class="bay-plate">SERVIZI</div>
+      <div class="bay-plate" data-i18n="servizi">SERVIZI</div>
     </div>
   </section>
 
   <!-- ============ COACHBUILDER STRIP (author plate) ============ -->
   <footer class="coach-strip" aria-label="Coachbuilder plate">
-    <span class="coach-caption">quadro strumenti</span>
+    <span class="coach-caption" data-i18n="quadro">quadro strumenti</span>
     <div class="author-plate" title="Coachbuilt with care">
       <span class="ap-screw ap-screw--l" aria-hidden="true"></span>
       <span class="ap-text">
@@ -265,6 +265,16 @@
       </div>
 
       <div class="config-body">
+        <label class="field">
+          <span class="field-label">Lingua / Language</span>
+          <select id="cfg-language" class="field-input">
+            <option value="it">Italiano</option>
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
+
         <label class="field">
           <span class="field-label">Target terminal</span>
           <select id="cfg-terminal" class="field-input"></select>
