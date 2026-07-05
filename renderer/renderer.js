@@ -28,30 +28,30 @@
    exported abroad still says "benzina" on the dial. Only the chrome
    plates and dynamic status strings translate.
    ===================================================================== */
+/* One label per instrument: the italic enamel-face engravings (tach_face,
+   fuel_face, rpm_face…) ARE the labels; the caption plates under the gauges
+   were removed in the design-polish pass. token_sub is the TOKEN counter's
+   single label — instrument name + unit in one breath, inside the housing. */
 const I18N = {
-  it: { tach_caption: 'TACHIMETRO · TOK/S', fuel_caption: 'CONTESTO', token_caption: 'TOKEN',
-        rpm_caption: 'RAGIONAMENTO', riserva: 'RISERVA', motore: 'MOTORE', rotta: 'ROTTA',
+  it: { riserva: 'RISERVA', motore: 'MOTORE', rotta: 'ROTTA',
         strada: 'la strada', cambio: 'CAMBIO', trasmissione: 'trasmissione', servizi: 'SERVIZI',
         quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale', wipers: 'OTTIMIZZA CONTESTO',
-        tach_face: 'velocità di generazione', fuel_face: 'contesto', token_face: 'token', token_sub: 'in + out',
+        tach_face: 'velocità di generazione', fuel_face: 'contesto', token_sub: 'token · in + out',
         rpm_face: 'ragionamento', rpm_fcap: 'carico di generazione', rpm_unit: 'CARICO × 1000' },
-  en: { tach_caption: 'SPEEDOMETER · TOK/S', fuel_caption: 'CONTEXT', token_caption: 'TOKENS',
-        rpm_caption: 'REASONING', riserva: 'RESERVE', motore: 'ENGINE', rotta: 'ROUTE',
+  en: { riserva: 'RESERVE', motore: 'ENGINE', rotta: 'ROUTE',
         strada: 'the road', cambio: 'GEARBOX', trasmissione: 'transmission', servizi: 'SERVICES',
         quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal', wipers: 'OPTIMIZE CONTEXT',
-        tach_face: 'generation speed', fuel_face: 'context', token_face: 'tokens', token_sub: 'in + out',
+        tach_face: 'generation speed', fuel_face: 'context', token_sub: 'tokens · in + out',
         rpm_face: 'reasoning', rpm_fcap: 'sustained gen. load', rpm_unit: 'LOAD × 1000' },
-  pt: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
-        rpm_caption: 'RACIOCÍNIO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'ROTA',
+  pt: { riserva: 'RESERVA', motore: 'MOTOR', rotta: 'ROTA',
         strada: 'a estrada', cambio: 'CÂMBIO', trasmissione: 'transmissão', servizi: 'SERVIÇOS',
         quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal', wipers: 'OTIMIZAR CONTEXTO',
-        tach_face: 'velocidade de geração', fuel_face: 'contexto', token_face: 'tokens', token_sub: 'in + out',
+        tach_face: 'velocidade de geração', fuel_face: 'contexto', token_sub: 'tokens · in + out',
         rpm_face: 'raciocínio', rpm_fcap: 'carga de geração', rpm_unit: 'CARGA × 1000' },
-  es: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
-        rpm_caption: 'RAZONAMIENTO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'RUTA',
+  es: { riserva: 'RESERVA', motore: 'MOTOR', rotta: 'RUTA',
         strada: 'la carretera', cambio: 'CAMBIO', trasmissione: 'transmisión', servizi: 'SERVICIOS',
         quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal', wipers: 'OPTIMIZAR CONTEXTO',
-        tach_face: 'velocidad de generación', fuel_face: 'contexto', token_face: 'tokens', token_sub: 'in + out',
+        tach_face: 'velocidad de generación', fuel_face: 'contexto', token_sub: 'tokens · in + out',
         rpm_face: 'razonamiento', rpm_fcap: 'carga de generación', rpm_unit: 'CARGA × 1000' },
 };
 let LANG = 'it';
@@ -253,6 +253,12 @@ function buildGauge(el, cfg) {
 
 /* ---- needle animation (eased, self-cancelling on new targets) ---- */
 function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+/* ease-out-back, tuned subtle (c1=0.7 ≈ 1.8% overshoot): the needle swings a
+   couple of degrees past a big target and settles, like a damped movement */
+function easeOutBack(t) { const c1 = 0.7, u = t - 1; return 1 + (c1 + 1) * u * u * u + c1 * u * u; }
+const NEEDLE_OVERSHOOT_MIN = 25;               // deg of throw before overshoot kicks in
+const DEG_PIN_LO = G.START - 3;                // physical stop pins: the needle may
+const DEG_PIN_HI = G.START + G.SWEEP + 3;      // kiss them, never swing through
 
 function animateNeedle(gauge, toDeg, dur = 850) {
   return new Promise((resolve) => {
@@ -264,11 +270,15 @@ function animateNeedle(gauge, toDeg, dur = 850) {
       gauge.needle.setAttribute('transform', `rotate(${toDeg.toFixed(2)} ${G.cx} ${G.cy})`);
       return resolve();
     }
+    // big throws settle with a physical overshoot; small corrections stay
+    // critically damped so the needle never jitters around idle
+    const ease = Math.abs(delta) >= NEEDLE_OVERSHOOT_MIN ? easeOutBack : easeInOutCubic;
     const t0 = performance.now();
     (function step(now) {
       if (token !== gauge.animToken) return resolve(); // superseded
       const t = Math.min(1, (now - t0) / dur);
-      const deg = from + delta * easeInOutCubic(t);
+      let deg = from + delta * ease(t);
+      if (deg < DEG_PIN_LO) deg = DEG_PIN_LO; else if (deg > DEG_PIN_HI) deg = DEG_PIN_HI;
       gauge.curDeg = deg; // track the live position so a new target starts from here
       gauge.needle.setAttribute('transform', `rotate(${deg.toFixed(2)} ${G.cx} ${G.cy})`);
       if (t < 1) requestAnimationFrame(step);
@@ -304,7 +314,9 @@ const gaugeRpm = buildGauge($('#gauge-rpm'), {
 });
 const gaugeFuel = buildGauge($('#gauge-fuel'), {
   id: 'gf', majors: 8, minorGroup: 4, labelEvery: 4, numSize: 20,
-  redFrom: 0, redTo: 0.15, faceLabel: 'benzina', faceLabelY: G.cy - 32, faceLabelSize: 15,
+  /* the face engraving is this instrument's only label now: larger, and
+     seated a touch lower so it clears the ½ numeral (≈10px effective) */
+  redFrom: 0, redTo: 0.15, faceLabel: 'benzina', faceLabelY: G.cy - 28, faceLabelSize: 18,
   valY: G.cy + 40, valSize: 20, initialText: '100%',
   numFor: (f) => (f === 0 ? 'E' : f === 1 ? 'F' : '½'),
 });
@@ -708,14 +720,27 @@ function throwKnob(x, y) {
   if (knobPos.x === x && knobPos.y === y) return;
   const from = knobPos;
   if (reduceMotion) { setKnobImmediate(x, y); return; }
+  /* mechanical H-gate throw: ease-in as the knob leaves the slot, a loose
+     run along the gate, then a firm ease-out as it seats in the new gear */
   const kf = [
-    { left: pctX(from.x), top: pctY(from.y) },
-    { left: pctX(from.x), top: pctY(VB.gateY) }, // pull down to the gate
-    { left: pctX(x),      top: pctY(VB.gateY) }, // slide along the gate
-    { left: pctX(x),      top: pctY(y) },        // push into the gear
+    { left: pctX(from.x), top: pctY(from.y), easing: 'cubic-bezier(.55,.06,.68,.35)' },
+    { left: pctX(from.x), top: pctY(VB.gateY), offset: 0.26, easing: 'cubic-bezier(.33,.6,.35,1)' },
+    { left: pctX(x),      top: pctY(VB.gateY), offset: 0.72, easing: 'cubic-bezier(.18,.9,.24,1)' },
+    { left: pctX(x),      top: pctY(y) },
   ];
   try {
-    knobEl.animate(kf, { duration: 520, easing: 'cubic-bezier(.3,.7,.25,1)', fill: 'forwards' });
+    const anim = knobEl.animate(kf, { duration: 520, fill: 'forwards' });
+    anim.onfinish = () => {
+      // seat "clunk": the ball ticks ~1.5px into the gate and settles
+      const ball = knobEl.querySelector('.knob-ball');
+      if (ball && ball.animate) {
+        ball.animate([
+          { transform: 'translateX(-50%) translateY(0)' },
+          { transform: 'translateX(-50%) translateY(1.5px) scale(0.985)', offset: 0.4 },
+          { transform: 'translateX(-50%) translateY(0)' },
+        ], { duration: 130, easing: 'ease-out' });
+      }
+    };
   } catch (_) { /* WAAPI unavailable */ }
   setKnobImmediate(x, y); // persist final resting style
 }
@@ -753,8 +778,15 @@ function buildSwitches(buttons) {
       `<span class="toggle-body"><span class="toggle-lever"></span></span>` +
       `<span class="toggle-plate">${escapeHtml(b.label || '')}</span>`;
     t.addEventListener('click', async () => {
-      t.classList.add('on');
-      setTimeout(() => t.classList.remove('on'), 600); // momentary, springs back
+      t.classList.remove('sprung');
+      t.classList.add('on'); // fast flick down (see .toggle.on in CSS)
+      setTimeout(() => {
+        t.classList.remove('on'); // momentary: springs back…
+        if (!reduceMotion) {
+          t.classList.add('sprung'); // …with a tiny rotational wobble
+          setTimeout(() => t.classList.remove('sprung'), 380);
+        }
+      }, 420);
       try { await dash.runButton(index); } catch (_) {}
     });
     row.appendChild(t);

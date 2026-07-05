@@ -123,11 +123,11 @@
           <span id="trip-add" class="trip-add">+0</span><span id="trip-del" class="trip-del">−0</span>
         </div>
       </div>
-      <div class="gauge-caption" data-i18n="tach_caption">TACHIMETRO · TOK/S</div>
     </div>
 
-    <!-- CONTESTO: context fuel (F = empty context) + RISERVA jewel -->
-    <div class="gauge-wrap gauge-wrap--small">
+    <!-- CONTESTO: context fuel (F = empty context) + RISERVA jewel.
+         The italic enamel engraving on the face is the instrument's label. -->
+    <div class="gauge-wrap gauge-wrap--small gauge-wrap--fuel">
       <div class="gauge gauge--small">
         <div id="gauge-fuel" class="gauge-svg" role="img" aria-label="Contesto: free context remaining"></div>
       </div>
@@ -135,7 +135,6 @@
         <span class="riserva-jewel" aria-hidden="true"></span>
         <span class="riserva-text" data-i18n="riserva">RISERVA</span>
       </div>
-      <div class="gauge-caption gauge-caption--small" data-i18n="fuel_caption">CONTESTO</div>
     </div>
 
     <!-- centre maker's crest: current engine (model) -->
@@ -151,14 +150,14 @@
       </div>
     </div>
 
-    <!-- TOKENS: rectangular roller counter (total tokens in+out), true odometer style -->
+    <!-- TOKENS: rectangular roller counter (total tokens in+out), true odometer style.
+         One label only: the italic sub inside the housing names the instrument. -->
     <div class="gauge-wrap gauge-wrap--small">
       <div class="counter-housing" role="img" aria-label="Token odometer: total tokens in and out"
            title="Km percorsi — total tokens (in + out)">
         <div id="odo-wheels" class="odo-wheels"></div>
-        <div class="counter-sub flourish" data-i18n="token_sub">in + out</div>
+        <div class="counter-sub flourish" data-i18n="token_sub">token · in + out</div>
       </div>
-      <div class="gauge-caption gauge-caption--small" data-i18n="token_caption">TOKEN</div>
     </div>
 
     <!-- RAGIONAMENTO: sustained generation intensity -->
@@ -166,7 +165,6 @@
       <div class="gauge gauge--big">
         <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Ragionamento: sustained generation intensity"></div>
       </div>
-      <div class="gauge-caption" data-i18n="rpm_caption">RAGIONAMENTO</div>
     </div>
   </section>
 
