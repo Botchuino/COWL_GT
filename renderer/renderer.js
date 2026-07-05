@@ -62,14 +62,12 @@ function applyI18n(lang) {
     el.textContent = t(el.dataset.i18n);
   });
   // enamel-face engravings (SVG text nodes created by buildGauge)
-  const FACE_MAP = { 'gt-flabel': 'tach_face', 'gf-flabel': 'fuel_face', 'gs-flabel': 'token_face',
+  const FACE_MAP = { 'gt-flabel': 'tach_face', 'gf-flabel': 'fuel_face',
                      'gr-flabel': 'rpm_face', 'gr-fcap': 'rpm_fcap', 'gr-funit': 'rpm_unit' };
   Object.keys(FACE_MAP).forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = t(FACE_MAP[id]);
   });
-  const tokenSub = document.getElementById('gs-val');
-  if (tokenSub && !/\d/.test(tokenSub.textContent)) tokenSub.textContent = t('token_sub');
   const langSel = $('#cfg-language');
   if (langSel) langSel.value = LANG;
 }
@@ -310,16 +308,9 @@ const gaugeFuel = buildGauge($('#gauge-fuel'), {
   valY: G.cy + 40, valSize: 20, initialText: '100%',
   numFor: (f) => (f === 0 ? 'E' : f === 1 ? 'F' : '½'),
 });
-/* TOKEN counter: same enamel face for visual coherence, but it's a counter,
-   not a dial — the needle is hidden and the roller odometer (moved here from
-   the tach) shows total tokens; session $ lives on the line beneath. */
-const gaugeSpend = buildGauge($('#gauge-spend'), {
-  id: 'gs', majors: 10, minorGroup: 2, labelEvery: 0, numSize: 17,
-  faceLabel: 'token', faceLabelY: G.cy - 32, faceLabelSize: 15,
-  valY: G.cy + 46, valSize: 11, initialText: 'in + out',
-  numFor: () => '',
-});
-if (gaugeSpend.needle) gaugeSpend.needle.setAttribute('display', 'none');
+/* TOKENS: a true rectangular roller counter (see .counter-housing in the
+   HTML) — no dial, no needle. The odometer wheels are driven by
+   updateOdometer from tokensIn+tokensOut. */
 
 /* =====================================================================
    1b. ROLLER ODOMETER (km percorsi = tokensIn + tokensOut)
@@ -488,11 +479,8 @@ function applyState(state) {
   if (gaugeFuel.valText) gaugeFuel.valText.textContent = `${Math.round(free)}%`;
   setRiserva(free);
 
-  // TOKEN counter face is driven by the roller odometer (see updateOdometer);
-  // session $ goes on the small line beneath the counter.
-  const cost = Math.max(0, Number(state.costUsd) || 0);
-  const spendLine = $('#spend-line .riserva-text');
-  if (spendLine) spendLine.textContent = '≈ $' + cost.toFixed(cost >= 100 ? 0 : 2);
+  // TOKENS roller counter is driven by updateOdometer (tokensIn+tokensOut);
+  // the $ readout was retired — tokens ARE the mileage.
 
   // model crest
   const nameEl = $('#model-name'), subEl = $('#model-sub');
@@ -1082,7 +1070,7 @@ async function boot() {
   setInterval(tickTelemetry, 1000);
 }
 
-const ALL_GAUGES = [gaugeTach, gaugeRpm, gaugeFuel, gaugeSpend];
+const ALL_GAUGES = [gaugeTach, gaugeRpm, gaugeFuel];
 async function selfTest() {
   await Promise.all(ALL_GAUGES.map((g) => animateNeedle(g, degForFrac(1), 650)));
   await Promise.all(ALL_GAUGES.map((g) => animateNeedle(g, degForFrac(0), 700)));

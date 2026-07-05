@@ -151,15 +151,13 @@
       </div>
     </div>
 
-    <!-- TOKEN: roller counter (total tokens in+out) with session $ beneath -->
+    <!-- TOKENS: rectangular roller counter (total tokens in+out), true odometer style -->
     <div class="gauge-wrap gauge-wrap--small">
-      <div class="gauge gauge--small gauge--counter">
-        <div id="gauge-spend" class="gauge-svg" role="img" aria-label="Token: total tokens counter"></div>
-        <div id="odo-wheels" class="odo-wheels" aria-label="Token odometer: total tokens in and out"
-             title="Km percorsi — total tokens (in + out)"></div>
+      <div class="counter-housing" role="img" aria-label="Token odometer: total tokens in and out"
+           title="Km percorsi — total tokens (in + out)">
+        <div id="odo-wheels" class="odo-wheels"></div>
+        <div class="counter-sub flourish" data-i18n="token_sub">in + out</div>
       </div>
-      <div id="spend-line" class="riserva riserva--spend" role="status" aria-label="Session spend"
-           title="Session spend"><span class="riserva-text">≈ $0</span></div>
       <div class="gauge-caption gauge-caption--small" data-i18n="token_caption">TOKEN</div>
     </div>
 

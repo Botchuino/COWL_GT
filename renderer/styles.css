@@ -14,14 +14,14 @@
 :root {
   color-scheme: light dark;
 
-  /* walnut wood */
-  --wood-1: #6a3b1c;
-  --wood-2: #40230f;
-  --wood-hi: #8a5227;
-  --wood-lo: #2a1508;
-  --wood-sheen: rgba(255, 214, 150, 0.10);
-  --burl-op: 0.95;
-  --grain-op: 0.8;
+  /* smoked oak, racing cabin: dark, desaturated, matte — less orange, less plastic */
+  --wood-1: #3d2c1e;
+  --wood-2: #241a11;
+  --wood-hi: #4e3a27;
+  --wood-lo: #150f09;
+  --wood-sheen: rgba(220, 190, 150, 0.05);
+  --burl-op: 0.35;
+  --grain-op: 0.4;
 
   /* ivory enamel gauge face */
   --enamel: #f6efdc;
@@ -76,13 +76,13 @@
 
 /* ---------- Design tokens: NIGHT (dark walnut + amber backlight) ---------- */
 :root[data-theme="night"] {
-  --wood-1: #3a2110;
-  --wood-2: #1b0f06;
-  --wood-hi: #4d2d14;
-  --wood-lo: #0e0703;
-  --wood-sheen: rgba(255, 176, 92, 0.06);
-  --burl-op: 0.7;
-  --grain-op: 0.55;
+  --wood-1: #241a12;
+  --wood-2: #120c07;
+  --wood-hi: #32251a;
+  --wood-lo: #090604;
+  --wood-sheen: rgba(255, 176, 92, 0.04);
+  --burl-op: 0.25;
+  --grain-op: 0.3;
 
   --enamel: #2c2517;
   --enamel-2: #251f12;
@@ -117,8 +117,8 @@
 /* honor OS preference when no manual override is set */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --wood-1: #3a2110; --wood-2: #1b0f06; --wood-hi: #4d2d14; --wood-lo: #0e0703;
-    --wood-sheen: rgba(255,176,92,0.06); --burl-op: 0.7; --grain-op: 0.55;
+    --wood-1: #241a12; --wood-2: #120c07; --wood-hi: #32251a; --wood-lo: #090604;
+    --wood-sheen: rgba(255,176,92,0.04); --burl-op: 0.25; --grain-op: 0.3;
     --enamel: #2c2517; --enamel-2: #251f12; --enamel-edge: #1d1810; --enamel-shadow: rgba(0,0,0,0.55);
     --ink: #f6dfa8; --ink-soft: #c29e60; --needle: #ff5a45; --needle-hi: #ff8b74; --redline: #ff3b2c;
     --chrome-hi: #dfe6ea; --chrome-1: #b7bfc5; --chrome-2: #6f777d; --chrome-3: #454c52; --chrome-lo: #23282c;
@@ -406,17 +406,38 @@ html, body {
   padding: 2px 10px 1px;
 }
 
+/* ---- TOKENS counter housing: rectangular odometer window, bakelite + chrome ---- */
+.counter-housing {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  width: calc(var(--gauge-small) * 1.35);
+  min-height: calc(var(--gauge-small) * 0.62);
+  padding: 12px 10px 8px;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.07), transparent 40%),
+    linear-gradient(180deg, #23201c, #14110d 70%, #0c0a07);
+  border: 1px solid rgba(0,0,0,0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -6px 12px rgba(0,0,0,0.55),
+    0 0 0 3px rgba(150,155,160,0.35),
+    0 0 0 4px rgba(0,0,0,0.5),
+    0 4px 10px rgba(0,0,0,0.5);
+}
+.counter-sub { font-size: 11px; }
+
 /* ---- roller odometer, set into the TOKEN counter face ---- */
 .odo-wheels {
-  position: absolute; left: 50%; top: 56%;
-  transform: translate(-50%, -50%);
+  position: relative;
   display: flex; gap: 1px;
   padding: 3px 4px;
   border-radius: 3px;
   background: linear-gradient(180deg, #060402, #1a1207 50%, #060402);
   border: 1px solid rgba(0,0,0,0.75);
   box-shadow: inset 0 2px 3px rgba(0,0,0,0.9), inset 0 -1px 2px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.25);
-  font-size: max(9px, calc(var(--gauge-small) * 0.105));
+  font-size: max(12px, calc(var(--gauge-small) * 0.135));
   line-height: 1;
   z-index: 2;
   pointer-events: auto;

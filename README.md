@@ -197,7 +197,7 @@ starting point.
 The statusline tap writes `~/.claude/dashboard/state.json` with:
 
 - `modelId` / `modelName` — the live model (drives the engaged-gear highlight).
-- `costUsd` — running session cost (the COST gauge).
+- `costUsd` — running session cost (recorded in state.json; the dial was retired — tokens are the mileage).
 - `contextPct` / `contextUsed` / `contextSize` — context-window usage.
 - `tokensIn` / `tokensOut` — cumulative session input/output tokens; the
   renderer differentiates successive states to show a live tokens-per-second
