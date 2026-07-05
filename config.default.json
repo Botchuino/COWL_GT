@@ -13,7 +13,7 @@
     "Code",
     "Cursor"
   ],
-  "injectEnterDelayMs": 80,
+  "injectEnterDelayMs": 250,
   "activateDelayMs": 150,
   "gears": [
     {
