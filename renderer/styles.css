@@ -1240,7 +1240,9 @@ html, body {
 .field-input, .cfg-row input, .cfg-row select {
   font-family: var(--font-serif); font-size: 13px;
   padding: 7px 9px; border-radius: 5px;
-  color: #23180c;
+  /* var(--ink) tracks the theme: dark ink on ivory by day, warm ivory on
+     dark enamel at night (a hardcoded dark here was unreadable in night mode) */
+  color: var(--ink);
   background: linear-gradient(180deg, var(--enamel), var(--enamel-edge));
   border: 1px solid rgba(0,0,0,0.4);
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
