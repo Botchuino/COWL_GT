@@ -32,19 +32,27 @@ const I18N = {
   it: { tach_caption: 'TACHIMETRO · TOK/S', fuel_caption: 'CONTESTO', token_caption: 'TOKEN',
         rpm_caption: 'RAGIONAMENTO', riserva: 'RISERVA', motore: 'MOTORE', rotta: 'ROTTA',
         strada: 'la strada', cambio: 'CAMBIO', trasmissione: 'trasmissione', servizi: 'SERVIZI',
-        quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale', wipers: 'OTTIMIZZA CONTESTO' },
+        quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale', wipers: 'OTTIMIZZA CONTESTO',
+        tach_face: 'velocità di generazione', fuel_face: 'contesto', token_face: 'token', token_sub: 'in + out',
+        rpm_face: 'ragionamento', rpm_fcap: 'carico di generazione', rpm_unit: 'CARICO × 1000' },
   en: { tach_caption: 'SPEEDOMETER · TOK/S', fuel_caption: 'CONTEXT', token_caption: 'TOKENS',
         rpm_caption: 'REASONING', riserva: 'RESERVE', motore: 'ENGINE', rotta: 'ROUTE',
         strada: 'the road', cambio: 'GEARBOX', trasmissione: 'transmission', servizi: 'SERVICES',
-        quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal', wipers: 'OPTIMIZE CONTEXT' },
+        quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal', wipers: 'OPTIMIZE CONTEXT',
+        tach_face: 'generation speed', fuel_face: 'context', token_face: 'tokens', token_sub: 'in + out',
+        rpm_face: 'reasoning', rpm_fcap: 'sustained gen. load', rpm_unit: 'LOAD × 1000' },
   pt: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
         rpm_caption: 'RACIOCÍNIO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'ROTA',
         strada: 'a estrada', cambio: 'CÂMBIO', trasmissione: 'transmissão', servizi: 'SERVIÇOS',
-        quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal', wipers: 'OTIMIZAR CONTEXTO' },
+        quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal', wipers: 'OTIMIZAR CONTEXTO',
+        tach_face: 'velocidade de geração', fuel_face: 'contexto', token_face: 'tokens', token_sub: 'in + out',
+        rpm_face: 'raciocínio', rpm_fcap: 'carga de geração', rpm_unit: 'CARGA × 1000' },
   es: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
         rpm_caption: 'RAZONAMIENTO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'RUTA',
         strada: 'la carretera', cambio: 'CAMBIO', trasmissione: 'transmisión', servizi: 'SERVICIOS',
-        quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal', wipers: 'OPTIMIZAR CONTEXTO' },
+        quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal', wipers: 'OPTIMIZAR CONTEXTO',
+        tach_face: 'velocidad de generación', fuel_face: 'contexto', token_face: 'tokens', token_sub: 'in + out',
+        rpm_face: 'razonamiento', rpm_fcap: 'carga de generación', rpm_unit: 'CARGA × 1000' },
 };
 let LANG = 'it';
 function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.it[key] || key; }
@@ -53,6 +61,15 @@ function applyI18n(lang) {
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
+  // enamel-face engravings (SVG text nodes created by buildGauge)
+  const FACE_MAP = { 'gt-flabel': 'tach_face', 'gf-flabel': 'fuel_face', 'gs-flabel': 'token_face',
+                     'gr-flabel': 'rpm_face', 'gr-fcap': 'rpm_fcap', 'gr-funit': 'rpm_unit' };
+  Object.keys(FACE_MAP).forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(FACE_MAP[id]);
+  });
+  const tokenSub = document.getElementById('gs-val');
+  if (tokenSub && !/\d/.test(tokenSub.textContent)) tokenSub.textContent = t('token_sub');
   const langSel = $('#cfg-language');
   if (langSel) langSel.value = LANG;
 }
@@ -169,16 +186,16 @@ function buildGauge(el, cfg) {
             filter="url(#patina)" opacity="0.55"/>
     </g>
 
-    <!-- redline arc -->
-    <path d="${redPath}" fill="none" stroke="var(--redline)" stroke-width="5" stroke-linecap="round"/>
+    <!-- redline arc (only when a redFrom is configured) -->
+    ${cfg.redFrom != null ? `<path d="${redPath}" fill="none" stroke="var(--redline)" stroke-width="5" stroke-linecap="round"/>` : ''}
 
     <!-- engraved tick work + numerals -->
     <g>${ticks}</g>
 
     <!-- italic face label (Bodoni italic) -->
-    ${cfg.faceLabel ? `<text x="${cx}" y="${cfg.faceLabelY != null ? cfg.faceLabelY : cy - 34}" text-anchor="middle"
-          font-family="var(--font-italic)" font-style="italic" font-size="${cfg.faceLabelSize || 12}"
-          letter-spacing="0.6" fill="var(--ink-soft)">${cfg.faceLabel}</text>` : ''}
+    ${cfg.faceLabel ? `<text id="${gid}-flabel" x="${cx}" y="${cfg.faceLabelY != null ? cfg.faceLabelY : cy - 34}" text-anchor="middle"
+          font-family="var(--font-italic)" font-style="italic" font-size="${cfg.faceLabelSize || 13}"
+          letter-spacing="0.6" fill="var(--ink)" opacity="0.85">${cfg.faceLabel}</text>` : ''}
 
     <!-- maker's mark -->
     ${cfg.maker ? `<text x="${cx}" y="${cy - 16}" text-anchor="middle"
@@ -186,13 +203,13 @@ function buildGauge(el, cfg) {
           fill="var(--ink-soft)" opacity="0.85">${cfg.maker}</text>` : ''}
 
     <!-- optional small italic caption (e.g. "regime di generazione") -->
-    ${cfg.faceCaption ? `<text x="${cx}" y="${cfg.faceCaptionY != null ? cfg.faceCaptionY : cy + 34}" text-anchor="middle"
-          font-family="var(--font-italic)" font-style="italic" font-size="7.5"
-          letter-spacing="0.3" fill="var(--ink-soft)">${cfg.faceCaption}</text>` : ''}
+    ${cfg.faceCaption ? `<text id="${gid}-fcap" x="${cx}" y="${cfg.faceCaptionY != null ? cfg.faceCaptionY : cy + 34}" text-anchor="middle"
+          font-family="var(--font-italic)" font-style="italic" font-size="9"
+          letter-spacing="0.3" fill="var(--ink)" opacity="0.8">${cfg.faceCaption}</text>` : ''}
 
     <!-- unit + live value, seated in the lower gap between numerals -->
-    ${cfg.unit ? `<text x="${cx}" y="${cfg.unitY != null ? cfg.unitY : cy + 42}" text-anchor="middle" font-family="var(--font-serif)"
-          font-size="8.5" letter-spacing="1.5" fill="var(--ink-soft)">${cfg.unit}</text>` : ''}
+    ${cfg.unit ? `<text id="${gid}-funit" x="${cx}" y="${cfg.unitY != null ? cfg.unitY : cy + 42}" text-anchor="middle" font-family="var(--font-serif)"
+          font-size="10" letter-spacing="1.4" fill="var(--ink)" opacity="0.8">${cfg.unit}</text>` : ''}
     <text id="${gid}-val" x="${cx}" y="${cfg.valY != null ? cfg.valY : cy + 62}" text-anchor="middle" font-family="var(--font-display)"
           font-size="${cfg.valSize || 15}" font-weight="700" fill="var(--ink)">${cfg.initialText}</text>
 
