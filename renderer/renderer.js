@@ -32,19 +32,19 @@ const I18N = {
   it: { tach_caption: 'TACHIMETRO · TOK/S', fuel_caption: 'CONTESTO', token_caption: 'TOKEN',
         rpm_caption: 'RAGIONAMENTO', riserva: 'RISERVA', motore: 'MOTORE', rotta: 'ROTTA',
         strada: 'la strada', cambio: 'CAMBIO', trasmissione: 'trasmissione', servizi: 'SERVIZI',
-        quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale' },
+        quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale', wipers: 'OTTIMIZZA CONTESTO' },
   en: { tach_caption: 'SPEEDOMETER · TOK/S', fuel_caption: 'CONTEXT', token_caption: 'TOKENS',
         rpm_caption: 'REASONING', riserva: 'RESERVE', motore: 'ENGINE', rotta: 'ROUTE',
         strada: 'the road', cambio: 'GEARBOX', trasmissione: 'transmission', servizi: 'SERVICES',
-        quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal' },
+        quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal', wipers: 'OPTIMIZE CONTEXT' },
   pt: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
         rpm_caption: 'RACIOCÍNIO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'ROTA',
         strada: 'a estrada', cambio: 'CÂMBIO', trasmissione: 'transmissão', servizi: 'SERVIÇOS',
-        quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal' },
+        quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal', wipers: 'OTIMIZAR CONTEXTO' },
   es: { tach_caption: 'VELOCÍMETRO · TOK/S', fuel_caption: 'CONTEXTO', token_caption: 'TOKENS',
         rpm_caption: 'RAZONAMIENTO', riserva: 'RESERVA', motore: 'MOTOR', rotta: 'RUTA',
         strada: 'la carretera', cambio: 'CAMBIO', trasmissione: 'transmisión', servizi: 'SERVICIOS',
-        quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal' },
+        quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal', wipers: 'OPTIMIZAR CONTEXTO' },
 };
 let LANG = 'it';
 function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.it[key] || key; }
@@ -855,7 +855,13 @@ function buildWipers(wipers) {
 
   wiperModes = (wipers && Array.isArray(wipers.modes)) ? wipers.modes : [];
   const plate = $('#wiper-plate');
-  if (plate) plate.textContent = (wipers && wipers.label) || 'TERGI';
+  if (plate) {
+    // Known default labels follow the language switch; a custom label is
+    // the user's own engraving and stays exactly as written.
+    const DEFAULT_WIPER_LABELS = ['TERGI', 'OTTIMIZZA CONTESTO', 'OPTIMIZE CONTEXT', 'OTIMIZAR CONTEXTO', 'OPTIMIZAR CONTEXTO'];
+    const lbl = wipers && wipers.label;
+    plate.textContent = (!lbl || DEFAULT_WIPER_LABELS.includes(String(lbl).toUpperCase())) ? t('wipers') : lbl;
+  }
 
   // positions: OFF + one per configured mode, fanned around the knob
   const names = ['OFF', ...wiperModes.map((m, i) => String(m.label || 'MODE ' + (i + 1)))];
