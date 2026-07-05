@@ -1,0 +1,295 @@
+<!doctype html>
+<!--
+  COWL · GT — vintage grand-tourer control surface (renderer markup, V3).
+  Frameless Electron window: the title bar below is hand-drawn and draggable.
+  All visuals are CSS/SVG only — no external assets, no CDN, fully offline.
+  Typography: macOS system Bodoni/Didot stacks (Italian display serifs) with
+  Snell Roundhand script for the coachbuilder's plate.
+
+  V3: the instrument cluster is real LLM telemetry in the Veglia Borletti
+  idiom — TACHIMETRO (tokens/sec) with a roller odometer + LoC trip counter,
+  CONTAGIRI (sustained generation intensity), BENZINA (context fuel, falls
+  toward E as the window fills, with a RISERVA jewel), SPESA ($). Below the
+  cluster: the "targhetta di rotta" route plate (cwd / session / injection
+  target) and "la strada" activity strip (last tool call). Gauges, gears,
+  switches and the wiper control are populated from config/state by
+  renderer.js.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'" />
+  <title>COWL · GT</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main id="cabin" class="cabin">
+
+  <!-- ============ WALNUT BURL VENEER (SVG turbulence under the lacquer) ============ -->
+  <svg class="veneer" aria-hidden="true" preserveAspectRatio="none">
+    <defs>
+      <!-- coarse burl figure: stretched fractal noise mapped to warm browns -->
+      <filter id="burl" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.013 0.058" numOctaves="3" seed="11" stitchTiles="stitch"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.30
+                  0 0 0 0 0.16
+                  0 0 0 0 0.055
+                  0.9 0.7 0 0 -0.42"/>
+      </filter>
+      <!-- fine straight grain riding on top of the burl -->
+      <filter id="grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.004 0.35" numOctaves="2" seed="4" stitchTiles="stitch"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.06
+                  0 0 0 0 0.025
+                  0 0 0 0 0.005
+                  0 0.8 0 0 -0.32"/>
+      </filter>
+      <!-- enamel patina speckle, shared by every gauge face (url(#patina)) -->
+      <filter id="patina" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="3"/>
+        <feColorMatrix type="matrix"
+          values="0 0 0 0 0.22
+                  0 0 0 0 0.15
+                  0 0 0 0 0.07
+                  0 0 0.9 0 -0.42"/>
+      </filter>
+      <radialGradient id="knot" cx="50%" cy="50%" r="50%">
+        <stop offset="0%"  stop-color="rgba(16,7,2,0.85)"/>
+        <stop offset="28%" stop-color="rgba(34,15,4,0.55)"/>
+        <stop offset="46%" stop-color="rgba(58,28,9,0.18)"/>
+        <stop offset="62%" stop-color="rgba(20,9,2,0.34)"/>
+        <stop offset="78%" stop-color="rgba(58,28,9,0.10)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+      </radialGradient>
+    </defs>
+    <rect class="veneer-burl"  x="0" y="0" width="100%" height="100%" filter="url(#burl)"/>
+    <rect class="veneer-grain" x="0" y="0" width="100%" height="100%" filter="url(#grain)"/>
+    <!-- a few darker knots, as burl veneer has -->
+    <ellipse cx="14%" cy="72%" rx="5.5%" ry="4%"  fill="url(#knot)" transform="rotate(-14 120 400)"/>
+    <ellipse cx="83%" cy="20%" rx="4.5%" ry="3.2%" fill="url(#knot)" transform="rotate(21 700 130)"/>
+    <ellipse cx="58%" cy="88%" rx="3.4%" ry="2.6%" fill="url(#knot)"/>
+  </svg>
+
+  <!-- leather-stitch border + slotted brass corner screws on the fascia -->
+  <div class="stitch-frame" aria-hidden="true"></div>
+  <span class="fascia-screw fs-tl" aria-hidden="true"></span>
+  <span class="fascia-screw fs-tr" aria-hidden="true"></span>
+  <span class="fascia-screw fs-bl" aria-hidden="true"></span>
+  <span class="fascia-screw fs-br" aria-hidden="true"></span>
+
+  <!-- ============ CUSTOM TITLE BAR (draggable) ============ -->
+  <header id="titlebar" class="titlebar">
+    <div class="nameplate">
+      <span class="nameplate-mark">COWL</span>
+      <span class="nameplate-dot">·</span>
+      <span class="nameplate-gt">GT</span>
+      <span class="nameplate-flourish">gran turismo</span>
+    </div>
+
+    <div class="titlebar-controls no-drag">
+      <button id="btn-config" class="chip chip--gear" aria-label="Open configuration panel" title="Configure">
+        <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 3.5l-2-1.2.3-2.3-2.2-.9-1.3-1.9-2.3.5L12 3l-1.2 2.2-2.3-.5-1.3 1.9-2.2.9.3 2.3L3 12l2 1.2-.3 2.3 2.2.9 1.3 1.9 2.3-.5L12 21l1.2-2.2 2.3.5 1.3-1.9 2.2-.9-.3-2.3L21 12z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="btn-night" class="chip" aria-label="Toggle night drive mode" title="Day / Night">
+        <svg viewBox="0 0 24 24" class="glyph glyph-sun" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/></g></svg>
+        <svg viewBox="0 0 24 24" class="glyph glyph-moon" aria-hidden="true"><path d="M20 14.5A8 8 0 019.5 4 7 7 0 1020 14.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="btn-pin" class="chip" aria-label="Keep window always on top" aria-pressed="false" title="Always on top">
+        <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 14v7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+      <button id="btn-min" class="chip" aria-label="Minimize window" title="Minimize">
+        <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M6 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button id="btn-close" class="chip chip--close" aria-label="Quit dashboard" title="Quit">
+        <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ INSTRUMENT CLUSTER (Veglia Borletti telemetry) ============ -->
+  <section class="cluster" aria-label="Instrument cluster">
+    <!-- translucent wiper-sweep overlay, animated when the wiper fires -->
+    <div id="wiper-sweep" class="wiper-sweep" aria-hidden="true"><span class="ws-blade"></span></div>
+
+    <!-- TACHIMETRO: tokens per second, with roller odometer + LoC trip -->
+    <div class="gauge-wrap gauge-wrap--big">
+      <div class="gauge gauge--big">
+        <div id="gauge-tach" class="gauge-svg" role="img" aria-label="Tachimetro: tokens per second"></div>
+        <div id="odo-wheels" class="odo-wheels" aria-label="Token odometer: total tokens in and out"
+             title="Km percorsi — total tokens (in + out)"></div>
+        <div id="trip-loc" class="trip-loc" aria-label="Trip counter: lines of code added and removed"
+             title="Trip — lines of code added / removed">
+          <span id="trip-add" class="trip-add">+0</span><span id="trip-del" class="trip-del">−0</span>
+        </div>
+      </div>
+      <div class="gauge-caption">TACHIMETRO</div>
+    </div>
+
+    <!-- BENZINA: context fuel (F = empty context) + RISERVA jewel -->
+    <div class="gauge-wrap gauge-wrap--small">
+      <div class="gauge gauge--small">
+        <div id="gauge-fuel" class="gauge-svg" role="img" aria-label="Benzina: free context remaining"></div>
+      </div>
+      <div id="riserva" class="riserva" role="status" aria-label="Context reserve warning lamp">
+        <span class="riserva-jewel" aria-hidden="true"></span>
+        <span class="riserva-text">RISERVA</span>
+      </div>
+      <div class="gauge-caption gauge-caption--small">BENZINA</div>
+    </div>
+
+    <!-- centre maker's crest: current engine (model) -->
+    <div class="crest-column">
+      <div id="model-badge" class="crest" role="status" aria-label="Current model">
+        <div class="crest-ring">
+          <div class="crest-face">
+            <div class="crest-topline">MOTORE</div>
+            <div id="model-name" class="crest-model">—</div>
+            <div id="model-sub" class="crest-sub">no signal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPESA: session dollars -->
+    <div class="gauge-wrap gauge-wrap--small">
+      <div class="gauge gauge--small">
+        <div id="gauge-spend" class="gauge-svg" role="img" aria-label="Spesa: session spend gauge"></div>
+      </div>
+      <div class="riserva riserva--spacer" aria-hidden="true"><span class="riserva-text">&nbsp;</span></div>
+      <div class="gauge-caption gauge-caption--small">SPESA</div>
+    </div>
+
+    <!-- CONTAGIRI: sustained generation intensity -->
+    <div class="gauge-wrap gauge-wrap--big">
+      <div class="gauge gauge--big">
+        <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Contagiri: sustained generation intensity"></div>
+      </div>
+      <div class="gauge-caption">CONTAGIRI</div>
+    </div>
+  </section>
+
+  <!-- ============ TARGHETTA DI ROTTA + LA STRADA (route + activity) ============ -->
+  <section class="waybar" aria-label="Route plate and activity strip">
+    <div id="route-plate" class="route-plate" role="group" aria-label="Route plate: working directory, session and keystroke target">
+      <span class="rp-clip rp-clip--l" aria-hidden="true"></span>
+      <span class="rp-label">ROTTA</span>
+      <span id="route-cwd" class="route-cwd" title="">—</span>
+      <span class="route-sep" aria-hidden="true">·</span>
+      <span id="route-session" class="route-session" title="Session id">—</span>
+      <span class="route-arrow" aria-hidden="true">→</span>
+      <span id="route-target" class="route-target" title="Keystrokes are sent to this terminal">—</span>
+      <span class="rp-clip rp-clip--r" aria-hidden="true"></span>
+    </div>
+
+    <div id="activity-strip" class="activity-strip" role="status" aria-label="Latest tool activity">
+      <span class="as-label flourish">la strada</span>
+      <span id="activity-glyph" class="activity-glyph" aria-hidden="true">◍</span>
+      <span id="activity-detail" class="activity-detail" title="">—</span>
+      <span id="activity-flag" class="activity-flag flourish">in sosta</span>
+    </div>
+  </section>
+
+  <!-- ============ GEAR SELECTOR (H-GATE) ============ -->
+  <section class="gearbox" aria-label="Gear selector">
+    <div class="gear-header">
+      <span class="engraved-title">CAMBIO <em class="flourish">trasmissione</em></span>
+      <span id="gear-readout" class="gear-readout">N</span>
+    </div>
+    <div id="gearplate" class="gearplate">
+      <svg id="gate-svg" class="gate" viewBox="0 0 440 210" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <!-- gear positions injected by renderer.js -->
+      <div id="shiftknob" class="shiftknob" aria-hidden="true">
+        <div class="knob-collar"></div>
+        <div class="knob-ball"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERDRIVE + WIPERS + SKILL SWITCHES ============ -->
+  <section class="lower">
+    <div class="overdrive-bay">
+      <button id="overdrive" class="overdrive" aria-label="Engage overdrive">
+        <span class="od-knob">
+          <span class="od-shaft"></span>
+          <span class="od-cap"><span id="od-label" class="od-cap-text">OVERDRIVE</span></span>
+        </span>
+      </button>
+      <div class="bay-plate">OVERDRIVE</div>
+    </div>
+
+    <div class="wiper-bay" aria-label="Wiper control">
+      <div id="wiper-control" class="wiper-control">
+        <!-- position buttons injected by renderer.js -->
+        <div id="wiper-knob" class="wiper-knob" aria-hidden="true">
+          <span class="wk-ring"></span>
+          <span id="wiper-cap" class="wk-cap">
+            <span class="wk-pointer"></span>
+            <span id="wiper-jewel" class="wk-jewel"></span>
+          </span>
+        </div>
+      </div>
+      <div id="wiper-plate" class="bay-plate">TERGI</div>
+    </div>
+
+    <div class="switch-bank" aria-label="Skill switches">
+      <div id="switch-row" class="switch-row"><!-- toggles injected --></div>
+      <div class="bay-plate">SERVIZI</div>
+    </div>
+  </section>
+
+  <!-- ============ COACHBUILDER STRIP (author plate) ============ -->
+  <footer class="coach-strip" aria-label="Coachbuilder plate">
+    <span class="coach-caption">quadro strumenti</span>
+    <div class="author-plate" title="Coachbuilt with care">
+      <span class="ap-screw ap-screw--l" aria-hidden="true"></span>
+      <span class="ap-text">
+        <span class="ap-script">made by botchuino</span>
+        <span class="ap-sub">CARROZZERIA</span>
+      </span>
+      <span class="ap-screw ap-screw--r" aria-hidden="true"></span>
+    </div>
+  </footer>
+
+  <!-- ============ CONFIG SLIDE-OVER ============ -->
+  <aside id="config-panel" class="config-panel" aria-hidden="true" aria-label="Configuration">
+    <div class="config-inner">
+      <div class="config-head">
+        <h2>Garage Settings</h2>
+        <button id="config-close" class="chip chip--close" aria-label="Close configuration">
+          <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <div class="config-body">
+        <label class="field">
+          <span class="field-label">Target terminal</span>
+          <select id="cfg-terminal" class="field-input"></select>
+        </label>
+
+        <div class="config-section">
+          <h3>Gears</h3>
+          <div id="cfg-gears" class="cfg-list"></div>
+        </div>
+
+        <div class="config-section">
+          <h3>Auxiliary switches</h3>
+          <div id="cfg-switches" class="cfg-list"></div>
+        </div>
+      </div>
+
+      <div class="config-foot">
+        <button id="config-save" class="btn-brass">Save &amp; store</button>
+        <span id="config-status" class="config-status" role="status"></span>
+      </div>
+    </div>
+  </aside>
+  <div id="config-scrim" class="config-scrim" aria-hidden="true"></div>
+
+</main>
+
+<script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+{
+  "targetTerminal": "auto",
+  "knownTerminals": [
+    "iTerm2",
+    "iTerm",
+    "Terminal",
+    "Ghostty",
+    "WezTerm",
+    "kitty",
+    "Alacritty",
+    "Warp",
+    "Hyper",
+    "Code",
+    "Cursor"
+  ],
+  "injectEnterDelayMs": 80,
+  "activateDelayMs": 150,
+  "gears": [
+    {
+      "gear": 1,
+      "label": "Haiku",
+      "sublabel": "4.5",
+      "modelArg": "haiku",
+      "match": [
+        "haiku"
+      ]
+    },
+    {
+      "gear": 2,
+      "label": "Sonnet",
+      "sublabel": "",
+      "modelArg": "sonnet",
+      "match": [
+        "sonnet"
+      ]
+    },
+    {
+      "gear": 3,
+      "label": "Sonnet 5",
+      "sublabel": "",
+      "modelArg": "claude-sonnet-5",
+      "match": [
+        "sonnet-5"
+      ]
+    },
+    {
+      "gear": 4,
+      "label": "Opus",
+      "sublabel": "",
+      "modelArg": "opus",
+      "match": [
+        "opus"
+      ]
+    },
+    {
+      "gear": 5,
+      "label": "Opus 4.8",
+      "sublabel": "",
+      "modelArg": "claude-opus-4-8",
+      "match": [
+        "opus-4-8"
+      ]
+    },
+    {
+      "gear": 6,
+      "label": "Opus 4.8",
+      "sublabel": "1M ctx",
+      "modelArg": "opus[1m]",
+      "match": [
+        "opus-4-8",
+        "1m"
+      ]
+    },
+    {
+      "gear": 7,
+      "label": "Fable 5",
+      "sublabel": "reverse",
+      "modelArg": "claude-fable-5",
+      "match": [
+        "fable"
+      ]
+    }
+  ],
+  "nos": {
+    "label": "OVERDRIVE",
+    "keystrokes": "ultracode ",
+    "enter": false
+  },
+  "skillButtons": [
+    {
+      "label": "DOCTOR",
+      "type": "text",
+      "keystrokes": "/doctor",
+      "enter": true
+    },
+    {
+      "label": "MCP",
+      "type": "text",
+      "keystrokes": "/mcp",
+      "enter": true
+    },
+    {
+      "label": "HELP",
+      "type": "text",
+      "keystrokes": "/help",
+      "enter": true
+    }
+  ],
+  "wipers": {
+    "label": "TERGI",
+    "modes": [
+      {
+        "label": "INT",
+        "keystrokes": "/compact",
+        "enter": true,
+        "confirm": false
+      },
+      {
+        "label": "FULL",
+        "keystrokes": "/clear",
+        "enter": true,
+        "confirm": true
+      }
+    ]
+  }
+}

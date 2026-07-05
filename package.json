@@ -1,0 +1,16 @@
+{
+  "name": "cowl-gt",
+  "version": "1.0.0",
+  "private": true,
+  "description": "COWL_GT — a vintage cowl for Claude Code: a floating macOS gauge cluster with a gear shifter (model switching), overdrive, skill switches, and wipers (/compact, /clear), driving a live Claude Code TUI session via keystroke injection.",
+  "author": "botchuino",
+  "license": "MIT",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

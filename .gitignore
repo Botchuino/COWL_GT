@@ -1,0 +1,7 @@
+node_modules/
+.pid
+state.json
+activity.json
+config.json
+*.log
+.DS_Store
