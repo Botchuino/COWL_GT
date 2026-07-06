@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('dash', {
   listTerminals: () => ipcRenderer.invoke('terminals:list'),
   setTerminal: (name) => ipcRenderer.invoke('terminals:set', name),
 
+  // --- backend availability (display-only "vetrina" mode) ---
+  probeInjection: () => ipcRenderer.invoke('inject:probe'),
+
   // --- window controls ---
   minimize: () => ipcRenderer.send('win:minimize'),
   toggleClose: () => ipcRenderer.send('win:close'),

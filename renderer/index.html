@@ -90,6 +90,13 @@
     </div>
 
     <div class="titlebar-controls no-drag">
+      <!-- CHECK-ENGINE telltale: lit amber when a keystroke-injection command
+           fails (no target window, missing Accessibility grant, dead backend).
+           The error rides the tooltip; click to acknowledge. Hidden until then. -->
+      <button id="btn-engine" class="chip chip--engine" aria-label="Spia motore — ultimo comando non consegnato" title="Spia motore" hidden>
+        <span class="engine-lamp" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M7 8h3l1.5-2H16v2h3v2h2v6h-2v2h-8.5L9 16H7v2H4v-3H2v-4h2V8h3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
       <!-- "richiamo in officina": lit amber only when a newer version is on
            GitHub. Click to pull it in and relaunch. Hidden until then. -->
       <button id="btn-update" class="chip chip--recall" aria-label="Aggiornamento disponibile — richiamo in officina" title="Aggiornamento disponibile" hidden>
@@ -189,6 +196,22 @@
       <span id="activity-detail" class="activity-detail" title="">—</span>
       <span id="activity-flag" class="activity-flag flourish">in sosta</span>
     </div>
+  </section>
+
+  <!-- ============ COMPUTER DI VIAGGIO (opt-in rich telemetry) ============
+       Appears only when the OTLP receiver is enabled and has data: last-turn
+       duration, cost, effort/speed, cache-hit — plus the wiper's real effect
+       (tokens saved) for two minutes after a compaction. -->
+  <section id="tripbar" class="tripbar" role="status" aria-label="Trip computer: per-turn telemetry" hidden>
+    <span class="tc-label flourish">computer di viaggio</span>
+    <span id="tc-time" class="tc-item" title="Durata dell'ultimo turno (API)">—</span>
+    <span class="tc-sep" aria-hidden="true">·</span>
+    <span id="tc-cost" class="tc-item" title="Costo dell'ultimo turno">—</span>
+    <span class="tc-sep" aria-hidden="true">·</span>
+    <span id="tc-effort" class="tc-item" title="Effort e velocità del motore">—</span>
+    <span class="tc-sep" aria-hidden="true">·</span>
+    <span id="tc-cache" class="tc-item" title="Cache hit sul prompt dell'ultimo turno">—</span>
+    <span id="tc-compact" class="tc-item tc-compact" title="Effetto dell'ultimo tergi: token risparmiati" hidden>—</span>
   </section>
 
   <!-- ============ CENTRE CONSOLE: gear H-gate flanked by the aux controls,

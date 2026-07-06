@@ -1,6 +1,6 @@
 {
   "name": "cowl-gt",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "COWL_GT — a vintage cowl for Claude Code: a floating gauge cluster (macOS, Windows, Linux/X11) with a gear shifter (model switching), overdrive, skill switches, and wipers (/compact, /clear), driving a live Claude Code TUI session via keystroke injection.",
   "author": "botchuino",

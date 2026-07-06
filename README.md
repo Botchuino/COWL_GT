@@ -52,6 +52,16 @@ transmission is per-OS, same contract everywhere:
 - **Windows** — PowerShell window activation + `SendKeys` (no special
   permission)
 - **Linux** — `xdotool` (X11 or XWayland; pure Wayland is not supported)
+- **WSL2** — Windows interop: the dashboard runs on the Linux side but drives
+  your Windows-side terminal (VS Code, Windows Terminal) through
+  `powershell.exe`, same transmission as native Windows
+
+If the transmission can't work at all on your machine (no backend binary, WSL
+interop disabled), the dashboard boots in **modalità vetrina** — display-only:
+gauges stay alive, the console dims and its tooltip says why. And when a
+single command fails (no target window, missing Accessibility grant), the
+amber **CHECK-ENGINE telltale** lights in the title bar with the exact error
+in its tooltip — no more silently dead buttons.
 
 To make a gear choice stick for **future** sessions, shifting also writes the
 model into `~/.claude/settings.json` (best-effort). Only the keystroke affects
@@ -256,6 +266,51 @@ starting point.
   session.
 - **`injectEnterDelayMs` / `activateDelayMs`** — timing knobs; increase if
   keystrokes land before the terminal is focused.
+- **`otel`** — the opt-in rich-telemetry receiver (see next section):
+  `{ "enabled": false, "port": 4318 }`. Changing it takes effect at the next
+  launch.
+
+---
+
+## Telemetria ricca — the trip computer (opt-in)
+
+The statusline tap is the lowest-latency signal Claude Code exposes — it
+stays the heartbeat of the needles. But Claude Code can also emit
+**OpenTelemetry** events with data the tap never sees: per-turn cost and
+duration, effort/speed, cache hits, the real effect of a `/compact`. COWL_GT
+can host a tiny local OTLP receiver for them and light up a **computer di
+viaggio** strip under the route plate:
+
+```
+computer di viaggio   12s · $0.42 · high · cache 87%          tergi −125k
+```
+
+Left to right: last-turn duration, cost, effort (+ `fast` when fast mode is
+on), cache-hit share of the prompt — and for two minutes after a compaction,
+the tokens the wiper actually saved.
+
+**Enable it** in `~/.claude/dashboard/config.json`:
+
+```json
+{ "otel": { "enabled": true, "port": 4318 } }
+```
+
+then start Claude Code with telemetry pointed at the dashboard:
+
+```bash
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_LOGS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/json
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+export OTEL_LOGS_EXPORT_INTERVAL=1000   # snappier than the 5s default
+```
+
+Privacy notes: the receiver binds **127.0.0.1 only** and runs in the main
+process (the renderer's CSP still forbids all network); nothing is stored or
+forwarded. The default install stays **fully offline** — with `otel.enabled`
+false (the default) no port is ever opened. Subagent/auxiliary API requests
+are ignored so the readout narrates your main conversation, not a workflow's
+fan-out.
 
 ---
 
@@ -301,11 +356,14 @@ lamp lights up: time to pull the TERGI stalk (`/compact` or `/clear`).
 
 - **Wayland:** on Linux, keystroke injection needs X11 or a terminal running
   under XWayland — `xdotool` cannot reach Wayland-native windows.
-- **WSL2:** the window renders fine under WSLg, but keystroke injection cannot
-  cross the Linux→Windows boundary — `xdotool` only sees WSLg windows, not your
-  Windows-side terminal (e.g. VS Code). Today WSL2 is **display-only**: gauges
-  work (wire up the statusline tap), controls don't. If Electron won't start,
-  try `node_modules/.bin/electron . --no-sandbox`.
+- **WSL2:** the dashboard detects WSL and drives your **Windows-side**
+  terminal through `powershell.exe` interop (`xdotool` can't see Windows
+  windows). Needs interop enabled (`/etc/wsl.conf` → `[interop] enabled=true`,
+  the default); if it's off, COWL boots in modalità vetrina and says so. The
+  first keystroke after a while can take a couple of seconds — that's
+  PowerShell cold-starting across the boundary. If Electron won't start, the
+  launcher retries with `--no-sandbox` on its own; for manual runs use
+  `node_modules/.bin/electron . --no-sandbox`.
 - **macOS app translocation:** if your terminal app runs from `~/Downloads`
   (or anywhere quarantined), macOS relaunches it from a randomized path and the
   **Accessibility grant never sticks** — keystrokes fail silently with
@@ -319,7 +377,10 @@ lamp lights up: time to pull the TERGI stalk (`/compact` or `/clear`).
   sessions the gauges show whichever session rendered last, and keystrokes go
   to the one configured target terminal. Best with one active session at a
   time.
-- **Fully offline.** No network, no CDN, no webfonts — everything is local.
+- **Offline by default.** No CDN, no webfonts — everything is local. The only
+  network touches are opt-in/outbound-explicit: the once-a-day update check
+  against GitHub, and the OTel receiver (off by default, and even when on it
+  binds 127.0.0.1 only).
 - **VS Code integrated terminal:** works (target app `Code`), with one focus
   caveat — macOS restores focus to wherever you last were inside VS Code. If
   you last touched the editor (not the terminal), injected keystrokes would
@@ -342,7 +403,8 @@ lamp lights up: time to pull the TERGI stalk (`/compact` or `/clear`).
   Code today via its integrated terminal — target app `Code`, auto-launched
   by the SessionStart hook.)
 - **More instruments** as richer session telemetry becomes available (active
-  subagents, queue depth, per-turn timing).
+  subagents, queue depth — per-turn timing landed with the OTel trip
+  computer).
 
 ---
 

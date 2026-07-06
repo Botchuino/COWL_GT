@@ -55,6 +55,28 @@ try {
   let child;
   if (typeof electronPath === 'string' && fs.existsSync(electronPath)) {
     child = spawn(electronPath, ['.'], { cwd: DASH_DIR, detached: true, stdio: 'ignore' });
+
+    // Linux: a missing SUID chrome-sandbox or disabled unprivileged user
+    // namespaces (common on Debian/Arch/WSL) kills Electron within moments.
+    // Watch briefly and relaunch ONCE with --no-sandbox instead of silently
+    // leaving no dashboard. This is the only path where the launcher lingers
+    // (~2.5s); the SessionStart hook runs it async, so nothing blocks.
+    if (process.platform === 'linux') {
+      let exitCode = null;
+      child.on('error', () => { exitCode = -1; });
+      child.once('exit', (code) => { exitCode = (code == null ? -1 : code); });
+      try { fs.writeFileSync(PIDFILE, String(child.pid)); } catch (_err) { /* best effort */ }
+      child.unref();
+      setTimeout(() => {
+        if (exitCode === null || exitCode === 0) process.exit(0); // still running (or clean exit)
+        const retry = spawn(electronPath, ['.', '--no-sandbox'], { cwd: DASH_DIR, detached: true, stdio: 'ignore' });
+        retry.on('error', () => { /* nothing to launch — never fail the session */ });
+        try { fs.writeFileSync(PIDFILE, String(retry.pid)); } catch (_err) { /* best effort */ }
+        retry.unref();
+        process.exit(0);
+      }, 2500);
+      return; // the timeout above owns process exit on this path
+    }
   } else {
     // Last resort: npx (needs a shell on Windows to resolve npx.cmd).
     // On Windows do NOT combine detached with shell:true — the detached

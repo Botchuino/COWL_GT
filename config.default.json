@@ -137,5 +137,9 @@
       }
     ]
   },
-  "language": "it"
+  "language": "it",
+  "otel": {
+    "enabled": false,
+    "port": 4318
+  }
 }

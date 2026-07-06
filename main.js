@@ -9,11 +9,13 @@ const config = require('./lib/config');
 const inject = require('./lib/inject');
 const statewatch = require('./lib/statewatch');
 const updater = require('./lib/updater');
+const otelReceiver = require('./lib/otel-receiver');
 
 let mainWindow = null;
 let stopWatch = null;
 let updateTimer = null;
 let lastUpdateInfo = null; // { available, local, remote } from the last check
+let otelServer = null;     // opt-in OTLP receiver handle (lib/otel-receiver)
 
 // alwaysOnTop is user-toggleable at runtime; default true.
 let alwaysOnTop = true;
@@ -66,6 +68,81 @@ function refreshTargetApp() {
     .then(() => { targetAppResolving = false; });
 }
 
+// --- OTel trip data --------------------------------------------------------------
+// Aggregated view of the opt-in OTLP stream (lib/otel-receiver): the last main
+// turn, the last compaction, the last tool result. Attached to every pushed
+// state as state.otel so the renderer's trip computer can read it.
+const otelData = { turn: null, compaction: null, tool: null };
+let otelDirty = false;
+let lastState = null; // last state the watcher emitted (for otel-only pushes)
+
+// Any local process can POST to the receiver, so ingested strings are capped
+// before they reach renderer tooltips/labels.
+const otelStr = (v, max) => String(v || '').slice(0, max || 128);
+
+function ingestOtelEvent(evt) {
+  const a = evt.attrs || {};
+  if (evt.name === 'claude_code.api_request') {
+    // Subagent/auxiliary requests would make the readout flap mid-workflow;
+    // the trip computer narrates the MAIN conversation.
+    if (a.query_source && a.query_source !== 'main') return;
+    const outTok = Number(a.output_tokens) || 0;
+    const durMs = Number(a.duration_ms) || 0;
+    const inTok = Number(a.input_tokens) || 0;
+    const cacheRead = Number(a.cache_read_tokens) || 0;
+    const cacheCreate = Number(a.cache_creation_tokens) || 0;
+    const promptTok = inTok + cacheRead + cacheCreate;
+    otelData.turn = {
+      at: evt.at,
+      model: otelStr(a.model),
+      costUsd: Number(a.cost_usd) || 0,
+      durationMs: durMs,
+      outputTokens: outTok,
+      tokPerSec: durMs > 0 ? outTok / (durMs / 1000) : 0,
+      effort: otelStr(a.effort, 24),
+      speed: otelStr(a.speed, 24),
+      cacheHitPct: promptTok > 0 ? Math.round(cacheRead / promptTok * 100) : null
+    };
+  } else if (evt.name === 'claude_code.compaction') {
+    const pre = Number(a.pre_tokens) || 0;
+    const post = Number(a.post_tokens) || 0;
+    otelData.compaction = {
+      at: evt.at,
+      trigger: otelStr(a.trigger, 24),
+      success: String(a.success) !== 'false',
+      preTokens: pre,
+      postTokens: post,
+      savedTokens: Math.max(0, pre - post)
+    };
+  } else if (evt.name === 'claude_code.tool_result') {
+    otelData.tool = {
+      at: evt.at,
+      name: otelStr(a.tool_name, 64),
+      durationMs: Number(a.duration_ms) || 0,
+      success: String(a.success) !== 'false'
+    };
+  } else {
+    return;
+  }
+  // Coalesce bursts (an export batch carries many events) into one push.
+  // Prefer the freshly-read state, then the last one the watcher emitted, and
+  // only fabricate an empty shell for otel-only setups with no tap wired.
+  if (!otelDirty) {
+    otelDirty = true;
+    setTimeout(() => {
+      otelDirty = false;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const state = statewatch.readState() || lastState || {};
+        mainWindow.webContents.send('state:update', decorateState(state));
+      }
+    }, 150);
+  }
+}
+
+function hasOtelData() {
+  return !!(otelData.turn || otelData.compaction || otelData.tool);
+}
+
 // Attach the computed activeGear + cached targetApp to a state object
 // (non-destructive copy) so the renderer can highlight without re-implementing
 // the matching rule. Kicks off a background targetApp refresh but reads the
@@ -76,7 +153,8 @@ function decorateState(state) {
   const cfg = config.load();
   return Object.assign({}, state, {
     activeGear: computeActiveGear(state, cfg),
-    targetApp: cachedTargetApp
+    targetApp: cachedTargetApp,
+    otel: hasOtelData() ? otelData : null
   });
 }
 
@@ -164,6 +242,12 @@ function registerIpc() {
     if (!gear) {
       return { ok: false, method: 'keystroke', error: 'Unknown gear: ' + gearNumber };
     }
+    // Display-only guard: shifting also mutates settings.json, so it must not
+    // slip through vetrina mode via keyboard focus or a stale renderer.
+    const probe = await inject.probeBackend();
+    if (probe && probe.available === false) {
+      return { ok: false, method: 'keystroke', error: 'display-only: ' + (probe.reason || 'keystroke injection unavailable') };
+    }
     // Persist for future sessions (does not block the keystroke).
     inject.writeModelToSettings(gear.modelArg);
 
@@ -236,6 +320,9 @@ function registerIpc() {
     return inject.listRunningTerminals(cfg);
   });
 
+  // Backend availability (display-only "vetrina" mode). Cached in lib/inject.
+  ipcMain.handle('inject:probe', () => inject.probeBackend());
+
   ipcMain.handle('terminals:set', (_e, name) => {
     const cfg = config.load();
     cfg.targetTerminal = name;
@@ -295,6 +382,13 @@ if (!gotLock) {
     registerIpc();
     createWindow();
 
+    // Opt-in rich telemetry (config.otel.enabled): local OTLP receiver feeding
+    // the trip computer. Enabling/disabling takes effect at the next launch.
+    const otelCfg = config.load().otel;
+    if (otelCfg && otelCfg.enabled) {
+      otelServer = otelReceiver.start(otelCfg, ingestOtelEvent, () => { /* status is best-effort */ });
+    }
+
     // Recall check: once ~20s after boot (so it never competes with the window
     // showing), then re-armed every 6h. lib/updater throttles the actual
     // network call to at most once per day.
@@ -322,6 +416,10 @@ if (!gotLock) {
       clearTimeout(updateTimer);
       clearInterval(updateTimer);
       updateTimer = null;
+    }
+    if (otelServer) {
+      otelServer.close();
+      otelServer = null;
     }
   });
 }

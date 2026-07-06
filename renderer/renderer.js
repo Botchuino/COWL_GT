@@ -86,6 +86,9 @@ const dash = window.dash || {
   wipe: async () => ({ ok: false, error: 'no bridge' }),
   listTerminals: async () => [],
   setTerminal: async () => {},
+  // available:true so browser dev mode stays interactive — each action's
+  // {ok:false,'no bridge'} result then exercises the CHECK-ENGINE telltale.
+  probeInjection: async () => ({ available: true }),
   minimize: noop,
   toggleClose: noop,
   toggleAlwaysOnTop: async () => false,
@@ -510,9 +513,10 @@ function applyState(state) {
   if (addEl) addEl.textContent = '+' + fmtCount(added);
   if (delEl) delEl.textContent = '−' + fmtCount(removed);
 
-  // route plate + activity strip
+  // route plate + activity strip + trip computer (opt-in OTel telemetry)
   applyRoute(state);
   applyActivity(state.activity);
+  applyTrip(state.otel);
 
   // engaged gear
   setEngaged(state.activeGear);
@@ -549,11 +553,50 @@ function applyRoute(state) {
   sesEl.textContent = sid ? sid.slice(0, 8) : '—';
   sesEl.title = sid ? `Session ${sid}` : 'Session id';
 
+  if (DISPLAY_ONLY) return; // vetrina: the target slot carries the mode label
   const target = state.targetApp ? String(state.targetApp) : '';
   tgtEl.textContent = target || '—';
   tgtEl.title = target
     ? `Keystrokes are sent to ${target}`
     : 'Keystrokes are sent to this terminal';
+}
+
+/* ---- computer di viaggio: opt-in per-turn telemetry (state.otel) ---- */
+const COMPACTION_FRESH_MS = 120000; // show the wiper's effect for 2 minutes
+
+function fmtDurMs(ms) {
+  ms = Number(ms);
+  if (!isFinite(ms) || ms <= 0) return '—';
+  return ms < 10000 ? (ms / 1000).toFixed(1) + 's' : Math.round(ms / 1000) + 's';
+}
+
+function fmtCost(usd) {
+  usd = Number(usd);
+  if (!isFinite(usd) || usd <= 0) return '—';
+  return '$' + (usd < 0.1 ? usd.toFixed(3) : usd.toFixed(2));
+}
+
+function applyTrip(otel) {
+  const bar = $('#tripbar');
+  if (!bar) return;
+  const turn = otel && otel.turn;
+  const comp = otel && otel.compaction;
+  if (!turn && !comp) { bar.hidden = true; return; }
+  bar.hidden = false;
+
+  $('#tc-time').textContent = turn ? fmtDurMs(turn.durationMs) : '—';
+  $('#tc-cost').textContent = turn ? fmtCost(turn.costUsd) : '—';
+  const effort = turn ? [turn.effort, turn.speed === 'fast' ? 'fast' : ''].filter(Boolean).join('·') : '';
+  $('#tc-effort').textContent = effort || '—';
+  $('#tc-cache').textContent = (turn && turn.cacheHitPct != null)
+    ? 'cache ' + turn.cacheHitPct + '%' : 'cache —';
+
+  const compEl = $('#tc-compact');
+  if (compEl) {
+    const fresh = comp && comp.success && (Date.now() - normTs(comp.at)) < COMPACTION_FRESH_MS;
+    compEl.hidden = !fresh;
+    if (fresh) compEl.textContent = 'tergi −' + fmtCount(comp.savedTokens);
+  }
 }
 
 /* ---- la strada: latest tool activity ---- */
@@ -776,6 +819,7 @@ function buildGearbox(gears) {
 /* R engaged: throw to the stop slot, send Escape, then spring back to the
    engaged gear — you don't stay in reverse while rolling. */
 async function onStop() {
+  if (DISPLAY_ONLY) return;
   clearTimeout(stopSpringback);
   throwKnob(gateStop.x, gateStop.y);
   $('#gear-readout').innerHTML =
@@ -790,7 +834,7 @@ async function onStop() {
       renderNeutralReadout();
     }
   }, 900);
-  try { await dash.stop(); } catch (_) {}
+  await reportInjection(dash.stop());
 }
 
 /* The single current-gear label: gear glyph + model name in the header plaque. */
@@ -849,12 +893,89 @@ function throwKnob(x, y) {
 }
 
 async function onShift(num, pos) {
+  if (DISPLAY_ONLY) return;
   clearTimeout(stopSpringback);
   throwKnob(pos.x, pos.y);
   renderReadout(num);
   document.querySelectorAll('.gearpos').forEach((b) =>
     b.classList.toggle('engaged', Number(b.dataset.gear) === num));
-  try { await dash.shift(num); } catch (_) {}
+  await reportInjection(dash.shift(num));
+}
+
+/* =====================================================================
+   3b. CHECK-ENGINE TELLTALE + injection result reporting
+   Backends resolve { ok:false, error } instead of throwing, so a swallowed
+   result used to mean a SILENT dead button (missing Accessibility grant,
+   no target window, dead backend). Every action now reports through here:
+   a failure lights the amber engine lamp in the titlebar with the error in
+   its tooltip; the next success — or a click — clears it.
+   ===================================================================== */
+let engineOffTimer = 0;
+
+function lightEngine(message) {
+  const btn = $('#btn-engine');
+  if (!btn) return;
+  btn.hidden = false;
+  btn.classList.add('lit');
+  const msg = String(message || 'comando non consegnato');
+  btn.title = 'Spia motore — ultimo comando non consegnato: ' + msg;
+  btn.setAttribute('aria-label', btn.title);
+  clearTimeout(engineOffTimer);
+  engineOffTimer = setTimeout(clearEngine, 30000); // self-clears like a real telltale
+}
+
+function clearEngine() {
+  const btn = $('#btn-engine');
+  if (!btn) return;
+  clearTimeout(engineOffTimer);
+  btn.classList.remove('lit');
+  btn.hidden = true;
+}
+
+let injectSeq = 0; // only the most recently issued command may touch the lamp
+
+async function reportInjection(promise) {
+  const seq = ++injectSeq;
+  let r = null;
+  try { r = await promise; } catch (err) {
+    if (seq === injectSeq) lightEngine(err && err.message ? err.message : String(err));
+    return null;
+  }
+  if (seq !== injectSeq) return r; // a newer command owns the lamp now
+  if (r && r.ok === false) lightEngine(r.error);
+  else if (r && r.ok) clearEngine();
+  return r;
+}
+
+/* =====================================================================
+   3c. MODALITÀ VETRINA — display-only when the injection backend reports
+   unavailable (unsupported platform, missing xdotool, WSL sans interop).
+   Gauges keep running off the statusline tap; controls go inert.
+   ===================================================================== */
+let DISPLAY_ONLY = null; // probe result when unavailable, else null
+
+function enterDisplayOnly(info) {
+  DISPLAY_ONLY = info || {};
+  document.body.classList.add('vetrina');
+  const reason = (DISPLAY_ONLY && DISPLAY_ONLY.reason) ||
+    'keystroke injection unavailable on this platform';
+  const console_ = document.querySelector('.console');
+  if (console_) {
+    console_.title = 'Modalità vetrina — comandi disattivati: ' + reason;
+    console_.setAttribute('aria-disabled', 'true');
+    // inert removes every descendant from focus/keyboard activation too —
+    // pointer-events alone would still let Tab+Enter fire injections.
+    if ('inert' in console_) console_.inert = true;
+  }
+  disableConsoleControls();
+  const tgt = $('#route-target');
+  if (tgt) { tgt.textContent = 'vetrina'; tgt.title = 'Display-only: ' + reason; }
+}
+
+// Really disable the console's controls (out of tab order, no Enter/Space).
+// Re-applied after any rebuild, since rebuilds create fresh buttons.
+function disableConsoleControls() {
+  document.querySelectorAll('.console button').forEach((b) => { b.disabled = true; });
 }
 
 /* =====================================================================
@@ -868,7 +989,7 @@ function wireOverdrive(nos) {
   btn.addEventListener('click', async () => {
     btn.classList.add('pulled');
     setTimeout(() => btn.classList.remove('pulled'), 620);
-    try { await dash.boost(); } catch (_) {}
+    await reportInjection(dash.boost());
   });
 }
 
@@ -892,7 +1013,7 @@ function buildSwitches(buttons) {
           setTimeout(() => t.classList.remove('sprung'), 380);
         }
       }, 420);
-      try { await dash.runButton(index); } catch (_) {}
+      await reportInjection(dash.runButton(index));
     });
     row.appendChild(t);
   });
@@ -954,11 +1075,10 @@ function wiperSweepFx() {
 }
 
 async function fireWiper(modeIndex) {
+  if (DISPLAY_ONLY) return;
   wiperSweepFx();
   wiperSpringToOff(700);
-  try {
-    if (typeof dash.wipe === 'function') await dash.wipe(modeIndex);
-  } catch (_) {}
+  if (typeof dash.wipe === 'function') await reportInjection(dash.wipe(modeIndex));
 }
 
 function onWiperPos(posIndex) {
@@ -1171,6 +1291,8 @@ function rebuildFromConfig() {
   if (odPlate) odPlate.textContent = (CONFIG.nos && CONFIG.nos.label) || 'OVERDRIVE';
   // re-apply engaged highlight after rebuild
   const eg = engagedGear; engagedGear = null; setEngaged(eg);
+  // rebuilds create fresh buttons — keep vetrina genuinely inert
+  if (DISPLAY_ONLY) disableConsoleControls();
 }
 
 /* =====================================================================
@@ -1250,6 +1372,8 @@ function wireUpdate() {
 async function boot() {
   wireTitlebar();
   wireUpdate();
+  const engineBtn = $('#btn-engine');
+  if (engineBtn) engineBtn.addEventListener('click', clearEngine); // acknowledge
   buildOdometer();
   $('#config-close').addEventListener('click', closeConfig);
   $('#config-scrim').addEventListener('click', closeConfig);
@@ -1265,6 +1389,16 @@ async function boot() {
   buildSwitches(CONFIG.skillButtons || []);
   buildWipers(CONFIG.wipers);
   wireOverdrive(CONFIG.nos);
+
+  // vetrina check: if the injection backend can't work here (missing xdotool,
+  // unsupported platform, WSL without interop), dim the controls up front
+  // instead of letting every click die silently.
+  try {
+    if (typeof dash.probeInjection === 'function') {
+      const probe = await dash.probeInjection();
+      if (probe && probe.available === false) enterDisplayOnly(probe);
+    }
+  } catch (_) { /* probe is best-effort */ }
 
   // ignition self-test: sweep every needle to full, then settle to real values
   await selfTest();
