@@ -8,9 +8,12 @@ const path = require('path');
 const config = require('./lib/config');
 const inject = require('./lib/inject');
 const statewatch = require('./lib/statewatch');
+const updater = require('./lib/updater');
 
 let mainWindow = null;
 let stopWatch = null;
+let updateTimer = null;
+let lastUpdateInfo = null; // { available, local, remote } from the last check
 
 // alwaysOnTop is user-toggleable at runtime; default true.
 let alwaysOnTop = true;
@@ -115,6 +118,29 @@ function createWindow() {
   });
 }
 
+// --- Update check ("richiamo in officina") ----------------------------------
+// Runs in the main process (the renderer's CSP forbids network). Notifies the
+// renderer to light the recall telltale when a newer version is on GitHub.
+// Throttled to once per day via lib/updater; `force` bypasses the throttle for
+// the manual "check now" action.
+function runUpdateCheck(force) {
+  if (!force && !updater.shouldCheck()) return Promise.resolve(lastUpdateInfo);
+  return updater.checkForUpdate()
+    .then((info) => {
+      lastUpdateInfo = info;
+      updater.recordCheck({ lastSeenRemote: info.remote });
+      if (info.available && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:available', info);
+      }
+      return info;
+    })
+    .catch((err) => {
+      // Offline / rate-limited / DNS: never bother the user, just try tomorrow.
+      updater.recordCheck({ lastError: String(err && err.message || err) });
+      return { available: false, error: String(err && err.message || err) };
+    });
+}
+
 // --- IPC handlers (back window.dash) ----------------------------------------
 
 function registerIpc() {
@@ -196,6 +222,15 @@ function registerIpc() {
     });
   });
 
+  // stop(): the R (retromarcia) gate position — sends Escape to the target
+  // terminal, interrupting Claude Code's current run. Momentary by design:
+  // the renderer springs the lever back to the engaged gear on its own.
+  ipcMain.handle('action:stop', async () => {
+    const cfg = config.load();
+    const appName = await inject.pickTargetApp(cfg);
+    return inject.injectChord(appName, 'escape', { activateDelayMs: cfg.activateDelayMs });
+  });
+
   ipcMain.handle('terminals:list', () => {
     const cfg = config.load();
     return inject.listRunningTerminals(cfg);
@@ -221,6 +256,24 @@ function registerIpc() {
     if (mainWindow) mainWindow.setAlwaysOnTop(alwaysOnTop, 'floating');
     return alwaysOnTop;
   });
+
+  // --- self-update ("richiamo in officina") ---
+  // Manual re-check (⌥ bypasses the daily throttle).
+  ipcMain.handle('update:check', () => runUpdateCheck(true));
+
+  // Apply: download + overlay the fresh files, then relaunch into the new
+  // version. On success the app quits and comes back, so the resolved value is
+  // only seen by the renderer when something failed before the relaunch.
+  ipcMain.handle('update:apply', async () => {
+    try {
+      const result = await updater.applyUpdate();
+      app.relaunch();
+      app.exit(0);
+      return { ok: true, newVersion: result.newVersion };
+    } catch (err) {
+      return { ok: false, error: String(err && err.message || err) };
+    }
+  });
 }
 
 // --- App lifecycle -----------------------------------------------------------
@@ -242,6 +295,14 @@ if (!gotLock) {
     registerIpc();
     createWindow();
 
+    // Recall check: once ~20s after boot (so it never competes with the window
+    // showing), then re-armed every 6h. lib/updater throttles the actual
+    // network call to at most once per day.
+    updateTimer = setTimeout(function armUpdateChecks() {
+      runUpdateCheck(false);
+      updateTimer = setInterval(() => runUpdateCheck(false), 6 * 60 * 60 * 1000);
+    }, 20000);
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -256,6 +317,11 @@ if (!gotLock) {
     if (stopWatch) {
       try { stopWatch(); } catch (_e) { /* ignore */ }
       stopWatch = null;
+    }
+    if (updateTimer) {
+      clearTimeout(updateTimer);
+      clearInterval(updateTimer);
+      updateTimer = null;
     }
   });
 }

@@ -10,8 +10,22 @@
     "Alacritty",
     "Warp",
     "Hyper",
+    "WindowsTerminal",
+    "wezterm-gui",
+    "org.wezfurlong.wezterm",
+    "mintty",
+    "ConEmu64",
+    "gnome-terminal",
+    "konsole",
+    "xfce4-terminal",
+    "tilix",
+    "terminator",
+    "xterm",
     "Code",
-    "Cursor"
+    "Cursor",
+    "pwsh",
+    "powershell",
+    "cmd"
   ],
   "injectEnterDelayMs": 250,
   "activateDelayMs": 150,
@@ -74,7 +88,7 @@
     {
       "gear": 7,
       "label": "Fable 5",
-      "sublabel": "reverse",
+      "sublabel": "",
       "modelArg": "claude-fable-5",
       "match": [
         "fable"

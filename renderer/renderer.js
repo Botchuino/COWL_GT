@@ -81,6 +81,7 @@ const dash = window.dash || {
   onState: noop,
   shift: async () => ({ ok: false, method: 'none', error: 'no bridge' }),
   boost: async () => ({ ok: false, error: 'no bridge' }),
+  stop: async () => ({ ok: false, error: 'no bridge' }),
   runButton: async () => ({ ok: false, error: 'no bridge' }),
   wipe: async () => ({ ok: false, error: 'no bridge' }),
   listTerminals: async () => [],
@@ -88,6 +89,9 @@ const dash = window.dash || {
   minimize: noop,
   toggleClose: noop,
   toggleAlwaysOnTop: async () => false,
+  onUpdateAvailable: noop,
+  checkUpdate: async () => ({ available: false }),
+  applyUpdate: async () => ({ ok: false, error: 'no bridge' }),
 };
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -95,6 +99,7 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 
 let CONFIG = null;      // current config
 let engagedGear = null; // gear.gear number currently engaged
+let liveModelName = ''; // last model name from state (shown in the neutral readout)
 
 /* =====================================================================
    1. GAUGE GEOMETRY + BUILDERS  (Veglia Borletti idiom)
@@ -494,10 +499,9 @@ function applyState(state) {
   // TOKENS roller counter is driven by updateOdometer (tokensIn+tokensOut);
   // the $ readout was retired — tokens ARE the mileage.
 
-  // model crest
-  const nameEl = $('#model-name'), subEl = $('#model-sub');
-  if (state.modelName) { nameEl.textContent = state.modelName; subEl.textContent = shortId(state.modelId); }
-  else { nameEl.textContent = '—'; subEl.textContent = t('no_signal'); }
+  // live model name — the MOTORE crest was retired (it duplicated the shifter);
+  // the gear readout now carries the model, and falls back to it in neutral.
+  liveModelName = state.modelName ? String(state.modelName) : '';
 
   // trip counter: lines of code
   const added = Math.max(0, Math.round(Number(state.linesAdded) || 0));
@@ -512,6 +516,8 @@ function applyState(state) {
 
   // engaged gear
   setEngaged(state.activeGear);
+  // keep the neutral readout's model name fresh even when the gear doesn't change
+  if (engagedGear == null) renderNeutralReadout();
 }
 
 /* ---- RISERVA jewel: amber <20% context left, red <10%, off otherwise ---- */
@@ -610,16 +616,30 @@ function setEngaged(activeGear) {
   const target = has ? num : null;
   if (target === engagedGear) return; // no change -> avoid re-throwing the knob
   engagedGear = target;
+  clearTimeout(stopSpringback); // a real gear change supersedes an R spring-back
 
   document.querySelectorAll('.gearpos').forEach((b) => {
     const on = has && Number(b.dataset.gear) === num;
     b.classList.toggle('engaged', on);
   });
 
-  const slot = has ? slotByGear(num) : { x: 220, y: 105 }; // neutral = gate centre
+  const slot = has ? slotByGear(num) : gateNeutral; // neutral = gate centre
   throwKnob(slot.x, slot.y);
-  const label = has ? gearLabelByNum(num) : 'N';
-  $('#gear-readout').textContent = label;
+  if (has) renderReadout(num);
+  else renderNeutralReadout();
+}
+
+/* Neutral (no gear matches the live model): show N, plus the raw model name if
+   we have one — so the model stays visible now the MOTORE crest is gone. */
+function renderNeutralReadout() {
+  const el = $('#gear-readout');
+  if (!el) return;
+  if (liveModelName) {
+    el.innerHTML = `<b class="gr-glyph">N</b><span class="gr-sep">·</span>` +
+      `<i class="gr-name">${escapeHtml(liveModelName)}</i>`;
+  } else {
+    el.textContent = 'N';
+  }
 }
 
 /* ---- small formatters/guards ---- */
@@ -635,16 +655,23 @@ function fmtCount(n) {
    3. GEAR SELECTOR (H-GATE)
    ===================================================================== */
 const gearSlots = new Map();       // gear.gear number -> {x,y}
-const gearLabels = new Map();      // gear.gear number -> readout label
-let knobPos = { x: 220, y: 105 };  // viewBox coords
+const gearLabels = new Map();      // gear.gear number -> { glyph, name } for the readout
 const knobEl = $('#shiftknob');
 
-const VB = { w: 440, h: 210, gateY: 105, upY: 45, downY: 165, col0: 55, colStep: 110 };
+/* Open-gate geometry. VB.w is recomputed per gear count so a short gearbox
+   gets a narrow plate instead of acres of empty nickel; the plate's CSS
+   aspect-ratio is kept in sync so % positioning stays exact and the drilled
+   holes stay round. margin 98 + step 88 give the classic ~2.3:1 plate at
+   seven gears (4 columns). */
+const VB = { w: 460, h: 200, gateY: 100, upY: 52, downY: 148, margin: 98, colStep: 88 };
+let gateNeutral = { x: VB.w / 2, y: VB.gateY }; // derived from geometry in buildGearbox
+let gateStop = { x: VB.w / 2, y: VB.downY };    // the R slot, ditto
+let stopSpringback = null;                       // pending R spring-back timer
+let knobPos = { x: gateNeutral.x, y: gateNeutral.y };
 const pctX = (x) => (x / VB.w * 100) + '%';
 const pctY = (y) => (y / VB.h * 100) + '%';
 
-function slotByGear(num) { return gearSlots.get(num) || { x: 220, y: 105 }; }
-function gearLabelByNum(num) { return gearLabels.get(num) || String(num); }
+function slotByGear(num) { return gearSlots.get(num) || gateNeutral; }
 
 function buildGearbox(gears) {
   const plate = $('#gearplate');
@@ -655,59 +682,124 @@ function buildGearbox(gears) {
   plate.querySelectorAll('.gearpos').forEach((n) => n.remove());
 
   const total = gears.length;
-  const revIdx = total - 1; // last gear sits in the "reverse" (down) slot
 
-  const positions = gears.map((g, i) => {
-    let col = Math.floor(i / 2);
-    let down = (i % 2 === 1);
-    if (i === revIdx) { down = true; col = Math.floor(revIdx / 2); }
-    return { x: VB.col0 + col * VB.colStep, y: down ? VB.downY : VB.upY, col };
-  });
+  /* Every gear keeps its numeral (1..N, pairs per column). R is NOT a gear:
+     it is the STOP position — it rides the free down slot of the last column
+     when the gear count is odd, or gets a dog-leg column of its own. */
+  const layout = gears.map((g, i) => ({ col: Math.floor(i / 2), down: i % 2 === 1 }));
+  const gearCols = total ? Math.floor((total - 1) / 2) + 1 : 0;
+  const rCol = (total % 2 === 1) ? Math.max(0, gearCols - 1) : gearCols;
+  const colsCount = Math.max(gearCols, rCol + 1, 1);
 
-  // ---- engrave the gate channels ----
-  const cols = [...new Set(positions.map((p) => p.col))].sort((a, b) => a - b);
-  const minX = VB.col0, maxX = VB.col0 + Math.max(...positions.map((p) => p.col)) * VB.colStep;
-  let channels = `<path d="M ${minX} ${VB.gateY} H ${maxX}" class="__gate"/>`;
-  cols.forEach((c) => {
-    const x = VB.col0 + c * VB.colStep;
-    const hasUp = positions.some((p) => p.col === c && p.y === VB.upY);
-    const hasDn = positions.some((p) => p.col === c && p.y === VB.downY);
-    if (hasUp) channels += `<path d="M ${x} ${VB.gateY} V ${VB.upY}" class="__gate"/>`;
-    if (hasDn) channels += `<path d="M ${x} ${VB.gateY} V ${VB.downY}" class="__gate"/>`;
-  });
-  // dark recessed stroke + lighter groove interior (engraved look)
+  // size the plate to the gate it carries
+  VB.w = VB.margin * 2 + (colsCount - 1) * VB.colStep;
+  gate.setAttribute('viewBox', `0 0 ${VB.w} ${VB.h}`);
+  plate.style.aspectRatio = `${VB.w} / ${VB.h}`;
+  gateNeutral = { x: VB.w / 2, y: VB.gateY };
+
+  const positions = layout.map((l) => ({
+    x: VB.margin + l.col * VB.colStep,
+    y: l.down ? VB.downY : VB.upY,
+    col: l.col, down: l.down
+  }));
+
+  // ---- machine the gate: through-cut channels + drilled stop-holes ----
+  let minX = VB.margin, maxX = VB.margin + (colsCount - 1) * VB.colStep;
+  if (minX === maxX) { minX -= 20; maxX += 20; } // single column: stub cross-bar so it still reads as a gate
+  let channels = `<path d="M ${minX} ${VB.gateY} H ${maxX}"/>`;
+  const termini = [{ x: minX, y: VB.gateY }, { x: maxX, y: VB.gateY }];
+  for (let c = 0; c < colsCount; c++) {
+    const x = VB.margin + c * VB.colStep;
+    if (positions.some((p) => p.col === c && !p.down)) {
+      channels += `<path d="M ${x} ${VB.gateY} V ${VB.upY}"/>`;
+      termini.push({ x, y: VB.upY });
+    }
+    if (positions.some((p) => p.col === c && p.down) || c === rCol) {
+      channels += `<path d="M ${x} ${VB.gateY} V ${VB.downY}"/>`;
+      termini.push({ x, y: VB.downY });
+    }
+  }
+  /* Three passes per channel — lower-lip highlight, the through-hole void
+     (vertical gradient so the cut reads as depth, not paint), then a top-edge
+     shadow — plus a drilled stop-hole slightly proud of every slot end. */
+  const holes = termini.map((t) =>
+    `<circle cx="${t.x}" cy="${t.y + 1.4}" r="7.5" fill="rgba(255,255,255,0.4)"/>` +
+    `<circle cx="${t.x}" cy="${t.y}" r="7" fill="url(#slotVoid)"/>`
+  ).join('');
   gate.innerHTML = `
+    <defs>
+      <linearGradient id="slotVoid" x1="0" y1="0" x2="0" y2="${VB.h}" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#14161a"/><stop offset="1" stop-color="#040506"/>
+      </linearGradient>
+    </defs>
     <g fill="none" stroke-linecap="round">
-      <g stroke="rgba(0,0,0,0.55)" stroke-width="15">${channels}</g>
-      <g stroke="rgba(0,0,0,0.35)" stroke-width="9">${channels}</g>
-      <g stroke="rgba(255,255,255,0.35)" stroke-width="1.5">${channels}</g>
-    </g>`;
-  // the class attribute in the template strings above is inert; strip it to avoid confusion
-  gate.querySelectorAll('.__gate').forEach((p) => p.removeAttribute('class'));
+      <g stroke="rgba(255,255,255,0.45)" stroke-width="15" transform="translate(0,1.4)">${channels}</g>
+      <g stroke="url(#slotVoid)" stroke-width="13">${channels}</g>
+      <g stroke="rgba(0,0,0,0.45)" stroke-width="11" transform="translate(0,-0.8)">${channels}</g>
+    </g>
+    ${holes}`;
 
-  // ---- clickable gear positions ----
+  // ---- clickable positions: engraved numerals outboard of the slot ends ----
   gears.forEach((g, i) => {
     const num = Number(g.gear != null ? g.gear : i + 1);
     const pos = positions[i];
     gearSlots.set(num, { x: pos.x, y: pos.y });
-    gearLabels.set(num, String(num));
+    gearLabels.set(num, { glyph: String(num), name: g.label || '' });
 
     const btn = document.createElement('button');
-    btn.className = 'gearpos' + (i === revIdx ? ' reverse' : '');
+    btn.className = 'gearpos ' + (pos.down ? 'down' : 'up');
     btn.dataset.gear = String(num);
     btn.style.left = pctX(pos.x);
-    btn.style.top = pctY(pos.y);
+    /* anchored between numeral and slot mouth so one hit area covers both */
+    btn.style.top = pctY(pos.down ? VB.downY + 13 : VB.upY - 13);
     btn.setAttribute('aria-label', `Shift to gear ${num}: ${g.label || ''} ${g.sublabel || ''}`.trim());
-    btn.innerHTML =
-      `<span class="gp-num">${i === revIdx ? 'R' : num}</span>` +
-      `<span class="gp-label">${escapeHtml(g.label || '')}</span>` +
-      (g.sublabel ? `<span class="gp-sub">${escapeHtml(g.sublabel)}</span>` : '');
+    btn.innerHTML = `<span class="gp-num">${num}</span>`;
     btn.addEventListener('click', () => onShift(num, pos));
     plate.appendChild(btn);
   });
 
-  // place knob at neutral initially
+  // ---- R: the STOP position (momentary — sends Escape, then springs back) ----
+  gateStop = { x: VB.margin + rCol * VB.colStep, y: VB.downY };
+  const rBtn = document.createElement('button');
+  rBtn.className = 'gearpos down reverse';
+  rBtn.style.left = pctX(gateStop.x);
+  rBtn.style.top = pctY(VB.downY + 13);
+  rBtn.setAttribute('aria-label', 'Retro / stop: interrupt the current run (Escape)');
+  rBtn.innerHTML = '<span class="gp-num">R</span>';
+  rBtn.addEventListener('click', onStop);
+  plate.appendChild(rBtn);
+
+  // re-seat the knob (viewBox may have changed width)
   setKnobImmediate(knobPos.x, knobPos.y);
+}
+
+/* R engaged: throw to the stop slot, send Escape, then spring back to the
+   engaged gear — you don't stay in reverse while rolling. */
+async function onStop() {
+  clearTimeout(stopSpringback);
+  throwKnob(gateStop.x, gateStop.y);
+  $('#gear-readout').innerHTML =
+    '<b class="gr-glyph">R</b><span class="gr-sep">·</span><i class="gr-name">stop</i>';
+  stopSpringback = setTimeout(() => {
+    if (engagedGear != null) {
+      const s = slotByGear(engagedGear);
+      throwKnob(s.x, s.y);
+      renderReadout(engagedGear);
+    } else {
+      throwKnob(gateNeutral.x, gateNeutral.y);
+      renderNeutralReadout();
+    }
+  }, 900);
+  try { await dash.stop(); } catch (_) {}
+}
+
+/* The single current-gear label: gear glyph + model name in the header plaque. */
+function renderReadout(num) {
+  const el = $('#gear-readout');
+  const g = gearLabels.get(num);
+  if (!g) { el.textContent = String(num); return; }
+  el.innerHTML = `<b class="gr-glyph">${g.glyph}</b>` +
+    (g.name ? `<span class="gr-sep">·</span><i class="gr-name">${escapeHtml(g.name)}</i>` : '');
 }
 
 function setKnobImmediate(x, y) {
@@ -721,15 +813,26 @@ function throwKnob(x, y) {
   const from = knobPos;
   if (reduceMotion) { setKnobImmediate(x, y); return; }
   /* mechanical H-gate throw: ease-in as the knob leaves the slot, a loose
-     run along the gate, then a firm ease-out as it seats in the new gear */
+     run along the gate, then a firm ease-out as it seats in the new gear.
+     The shadow deepens mid-run — the lever lifts as it clears the gate. */
+  const shadow0 = 'drop-shadow(0 4px 5px rgba(0,0,0,0.55))';
+  const shadow1 = 'drop-shadow(0 7px 8px rgba(0,0,0,0.5))';
   const kf = [
-    { left: pctX(from.x), top: pctY(from.y), easing: 'cubic-bezier(.55,.06,.68,.35)' },
-    { left: pctX(from.x), top: pctY(VB.gateY), offset: 0.26, easing: 'cubic-bezier(.33,.6,.35,1)' },
-    { left: pctX(x),      top: pctY(VB.gateY), offset: 0.72, easing: 'cubic-bezier(.18,.9,.24,1)' },
-    { left: pctX(x),      top: pctY(y) },
+    { left: pctX(from.x), top: pctY(from.y), filter: shadow0, easing: 'cubic-bezier(.55,.06,.68,.35)' },
+    { left: pctX(from.x), top: pctY(VB.gateY), filter: shadow1, offset: 0.26, easing: 'cubic-bezier(.33,.6,.35,1)' },
+    { left: pctX(x),      top: pctY(VB.gateY), filter: shadow1, offset: 0.72, easing: 'cubic-bezier(.18,.9,.24,1)' },
+    { left: pctX(x),      top: pctY(y), filter: shadow0 },
   ];
   try {
-    const anim = knobEl.animate(kf, { duration: 520, fill: 'forwards' });
+    const anim = knobEl.animate(kf, { duration: 420, fill: 'forwards' });
+    const liftBall = knobEl.querySelector('.knob-ball');
+    if (liftBall && liftBall.animate) {
+      liftBall.animate([
+        { transform: 'translateX(-50%) scale(1)' },
+        { transform: 'translateX(-50%) scale(1.05)', offset: 0.5 },
+        { transform: 'translateX(-50%) scale(1)' },
+      ], { duration: 420, easing: 'ease-in-out' });
+    }
     anim.onfinish = () => {
       // seat "clunk": the ball ticks ~1.5px into the gate and settles
       const ball = knobEl.querySelector('.knob-ball');
@@ -746,8 +849,9 @@ function throwKnob(x, y) {
 }
 
 async function onShift(num, pos) {
+  clearTimeout(stopSpringback);
   throwKnob(pos.x, pos.y);
-  $('#gear-readout').textContent = gearLabelByNum(num);
+  renderReadout(num);
   document.querySelectorAll('.gearpos').forEach((b) =>
     b.classList.toggle('engaged', Number(b.dataset.gear) === num));
   try { await dash.shift(num); } catch (_) {}
@@ -758,7 +862,8 @@ async function onShift(num, pos) {
    ===================================================================== */
 function wireOverdrive(nos) {
   const btn = $('#overdrive');
-  $('#od-label').textContent = (nos && nos.label) || 'OVERDRIVE';
+  const odPlate = $('#overdrive-plate');
+  if (odPlate) odPlate.textContent = (nos && nos.label) || 'OVERDRIVE';
   btn.setAttribute('aria-label', `Engage ${(nos && nos.label) || 'overdrive'}`);
   btn.addEventListener('click', async () => {
     btn.classList.add('pulled');
@@ -1062,9 +1167,81 @@ function rebuildFromConfig() {
   buildGearbox(CONFIG.gears || []);
   buildSwitches(CONFIG.skillButtons || []);
   buildWipers(CONFIG.wipers);
-  $('#od-label').textContent = (CONFIG.nos && CONFIG.nos.label) || 'OVERDRIVE';
+  const odPlate = $('#overdrive-plate');
+  if (odPlate) odPlate.textContent = (CONFIG.nos && CONFIG.nos.label) || 'OVERDRIVE';
   // re-apply engaged highlight after rebuild
   const eg = engagedGear; engagedGear = null; setEngaged(eg);
+}
+
+/* =====================================================================
+   7b. SELF-UPDATE TELLTALE  ("richiamo in officina")
+   The main process checks GitHub daily (the renderer's CSP forbids network).
+   When a newer version exists, it lights this amber lamp in the titlebar.
+   First click arms (confirm), second click downloads + relaunches.
+   ===================================================================== */
+let updateInfo = null;
+let updateBusy = false;
+let recallArmTimer = 0;
+
+function showRecall(info) {
+  if (info) updateInfo = info;
+  const btn = $('#btn-update');
+  if (!btn) return;
+  btn.hidden = false;
+  btn.classList.remove('working', 'failed', 'armed');
+  btn.classList.add('lit');
+  const to = updateInfo && updateInfo.remote ? updateInfo.remote : '';
+  const from = updateInfo && updateInfo.local ? updateInfo.local : '';
+  btn.title = to
+    ? `Aggiornamento disponibile: v${from} → v${to} — clic per installare`
+    : 'Aggiornamento disponibile';
+  btn.setAttribute('aria-label', btn.title);
+}
+
+async function onRecallClick() {
+  const btn = $('#btn-update');
+  if (!btn || updateBusy) return;
+
+  // first click arms; second click within the window commits (like the wiper)
+  if (!btn.classList.contains('armed')) {
+    btn.classList.add('armed');
+    btn.title = 'Clic di nuovo per scaricare e riavviare';
+    clearTimeout(recallArmTimer);
+    recallArmTimer = setTimeout(() => { btn.classList.remove('armed'); showRecall(); }, 3000);
+    return;
+  }
+
+  clearTimeout(recallArmTimer);
+  updateBusy = true;
+  btn.classList.remove('armed');
+  btn.classList.add('working');
+  btn.title = 'Scarico l’aggiornamento…';
+  try {
+    const r = await dash.applyUpdate();
+    // On success the app relaunches into the new version and we never reach
+    // here; a returned {ok:false} means it failed before the relaunch.
+    if (r && r.ok === false) {
+      updateBusy = false;
+      btn.classList.remove('working');
+      btn.classList.add('failed');
+      btn.title = 'Aggiornamento fallito: ' + (r.error || 'errore') + ' — clic per riprovare';
+      setTimeout(() => { btn.classList.remove('failed'); showRecall(); }, 4500);
+    }
+  } catch (_e) {
+    updateBusy = false;
+    btn.classList.remove('working');
+    showRecall();
+  }
+}
+
+function wireUpdate() {
+  const btn = $('#btn-update');
+  if (btn) btn.addEventListener('click', onRecallClick);
+  try {
+    if (typeof dash.onUpdateAvailable === 'function') {
+      dash.onUpdateAvailable((info) => { if (info && info.available) showRecall(info); });
+    }
+  } catch (_) {}
 }
 
 /* =====================================================================
@@ -1072,6 +1249,7 @@ function rebuildFromConfig() {
    ===================================================================== */
 async function boot() {
   wireTitlebar();
+  wireUpdate();
   buildOdometer();
   $('#config-close').addEventListener('click', closeConfig);
   $('#config-scrim').addEventListener('click', closeConfig);
@@ -1120,7 +1298,7 @@ const FALLBACK_CONFIG = {
     { gear: 4, label: 'Opus', sublabel: '', modelArg: 'opus' },
     { gear: 5, label: 'Opus 4.8', sublabel: '', modelArg: 'claude-opus-4-8' },
     { gear: 6, label: 'Opus 4.8', sublabel: '1M ctx', modelArg: 'opus[1m]' },
-    { gear: 7, label: 'Fable 5', sublabel: 'reverse', modelArg: 'claude-fable-5' },
+    { gear: 7, label: 'Fable 5', sublabel: '', modelArg: 'claude-fable-5' },
   ],
   nos: { label: 'OVERDRIVE', keystrokes: 'ultracode ', enter: false },
   wipers: {

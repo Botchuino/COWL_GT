@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('dash', {
   boost: () => ipcRenderer.invoke('action:boost'),
   runButton: (index) => ipcRenderer.invoke('action:runButton', index),
   wipe: (modeIndex) => ipcRenderer.invoke('action:wipe', modeIndex),
+  stop: () => ipcRenderer.invoke('action:stop'),
 
   // --- terminal targeting ---
   listTerminals: () => ipcRenderer.invoke('terminals:list'),
@@ -30,5 +31,14 @@ contextBridge.exposeInMainWorld('dash', {
   // --- window controls ---
   minimize: () => ipcRenderer.send('win:minimize'),
   toggleClose: () => ipcRenderer.send('win:close'),
-  toggleAlwaysOnTop: () => ipcRenderer.invoke('win:toggleAlwaysOnTop')
+  toggleAlwaysOnTop: () => ipcRenderer.invoke('win:toggleAlwaysOnTop'),
+
+  // --- self-update ("richiamo in officina") ---
+  onUpdateAvailable: (cb) => {
+    ipcRenderer.on('update:available', (_e, info) => {
+      try { cb(info); } catch (_err) { /* swallow renderer callback errors */ }
+    });
+  },
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  applyUpdate: () => ipcRenderer.invoke('update:apply')
 });

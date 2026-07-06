@@ -90,6 +90,13 @@
     </div>
 
     <div class="titlebar-controls no-drag">
+      <!-- "richiamo in officina": lit amber only when a newer version is on
+           GitHub. Click to pull it in and relaunch. Hidden until then. -->
+      <button id="btn-update" class="chip chip--recall" aria-label="Aggiornamento disponibile — richiamo in officina" title="Aggiornamento disponibile" hidden>
+        <span class="recall-lamp" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" class="glyph glyph-wrench" aria-hidden="true"><path d="M14.7 6.3a4 4 0 00-5.2 5.2l-6 6a1.5 1.5 0 002.1 2.1l6-6a4 4 0 005.2-5.2l-2.4 2.4-2.1-.6-.6-2.1 2.4-2.4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24" class="glyph glyph-spinner" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="30 14"/></svg>
+      </button>
       <button id="btn-config" class="chip chip--gear" aria-label="Open configuration panel" title="Configure">
         <svg viewBox="0 0 24 24" class="glyph" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 3.5l-2-1.2.3-2.3-2.2-.9-1.3-1.9-2.3.5L12 3l-1.2 2.2-2.3-.5-1.3 1.9-2.2.9.3 2.3L3 12l2 1.2-.3 2.3 2.2.9 1.3 1.9 2.3-.5L12 21l1.2-2.2 2.3.5 1.3-1.9 2.2-.9-.3-2.3L21 12z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
       </button>
@@ -114,56 +121,51 @@
     <!-- translucent wiper-sweep overlay, animated when the wiper fires -->
     <div id="wiper-sweep" class="wiper-sweep" aria-hidden="true"><span class="ws-blade"></span></div>
 
-    <!-- TACHIMETRO: tokens per second + LoC trip -->
-    <div class="gauge-wrap gauge-wrap--big gauge-wrap--tach">
-      <div class="gauge gauge--big">
-        <div id="gauge-tach" class="gauge-svg" role="img" aria-label="Tachimetro: tokens per second"></div>
-        <div id="trip-loc" class="trip-loc" aria-label="Trip counter: lines of code added and removed"
-             title="Trip — lines of code added / removed">
-          <span id="trip-add" class="trip-add">+0</span><span id="trip-del" class="trip-del">−0</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- CONTESTO: context fuel (F = empty context) + RISERVA jewel.
-         The italic enamel engraving on the face is the instrument's label. -->
-    <div class="gauge-wrap gauge-wrap--small gauge-wrap--fuel">
-      <div class="gauge gauge--small">
-        <div id="gauge-fuel" class="gauge-svg" role="img" aria-label="Contesto: free context remaining"></div>
-      </div>
-      <div id="riserva" class="riserva" role="status" aria-label="Context reserve warning lamp">
-        <span class="riserva-jewel" aria-hidden="true"></span>
-        <span class="riserva-text" data-i18n="riserva">RISERVA</span>
-      </div>
-    </div>
-
-    <!-- centre maker's crest: current engine (model) -->
-    <div class="crest-column">
-      <div id="model-badge" class="crest" role="status" aria-label="Current model">
-        <div class="crest-ring">
-          <div class="crest-face">
-            <div class="crest-topline" data-i18n="motore">MOTORE</div>
-            <div id="model-name" class="crest-model">—</div>
-            <div id="model-sub" class="crest-sub">no signal</div>
+    <!-- LEFT: TACHIMETRO (velocità di generazione), on its own so the two big
+         dials mirror each other across the centre column -->
+    <div class="cluster-side cluster-side--l">
+      <div class="gauge-wrap gauge-wrap--big gauge-wrap--tach">
+        <div class="gauge gauge--big">
+          <div id="gauge-tach" class="gauge-svg" role="img" aria-label="Tachimetro: tokens per second"></div>
+          <div id="trip-loc" class="trip-loc" aria-label="Trip counter: lines of code added and removed"
+               title="Trip — lines of code added / removed">
+            <span id="trip-add" class="trip-add">+0</span><span id="trip-del" class="trip-del">−0</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- TOKENS: rectangular roller counter (total tokens in+out), true odometer style.
-         One label only: the italic sub inside the housing names the instrument. -->
-    <div class="gauge-wrap gauge-wrap--small">
-      <div class="counter-housing" role="img" aria-label="Token odometer: total tokens in and out"
-           title="Km percorsi — total tokens (in + out)">
-        <div id="odo-wheels" class="odo-wheels"></div>
-        <div class="counter-sub flourish" data-i18n="token_sub">token · in + out</div>
+    <!-- CENTRE column: CONTESTO fuel (with its RISERVA lamp) on top, the TOKEN
+         odometer below — a central stack flanked symmetrically by the two dials -->
+    <div class="cluster-center">
+      <!-- CONTESTO: context fuel (F = empty context) + RISERVA jewel.
+           The italic enamel engraving on the face is the instrument's label. -->
+      <div class="gauge-wrap gauge-wrap--small gauge-wrap--fuel">
+        <div class="gauge gauge--small">
+          <div id="gauge-fuel" class="gauge-svg" role="img" aria-label="Contesto: free context remaining"></div>
+        </div>
+        <div id="riserva" class="riserva" role="status" aria-label="Context reserve warning lamp">
+          <span class="riserva-jewel" aria-hidden="true"></span>
+          <span class="riserva-text" data-i18n="riserva">RISERVA</span>
+        </div>
+      </div>
+
+      <!-- TOKENS: rectangular roller counter (total tokens in+out), odometer style -->
+      <div class="gauge-wrap gauge-wrap--counter">
+        <div class="counter-housing" role="img" aria-label="Token odometer: total tokens in and out"
+             title="Km percorsi — total tokens (in + out)">
+          <div id="odo-wheels" class="odo-wheels"></div>
+          <div class="counter-sub flourish" data-i18n="token_sub">token · in + out</div>
+        </div>
       </div>
     </div>
 
-    <!-- RAGIONAMENTO: sustained generation intensity -->
-    <div class="gauge-wrap gauge-wrap--big">
-      <div class="gauge gauge--big">
-        <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Ragionamento: sustained generation intensity"></div>
+    <!-- RIGHT: CONTAGIRI / RAGIONAMENTO (sustained generation intensity) -->
+    <div class="cluster-side cluster-side--r">
+      <div class="gauge-wrap gauge-wrap--big">
+        <div class="gauge gauge--big">
+          <div id="gauge-rpm" class="gauge-svg" role="img" aria-label="Ragionamento: sustained generation intensity"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -189,35 +191,56 @@
     </div>
   </section>
 
-  <!-- ============ GEAR SELECTOR (H-GATE) ============ -->
-  <section class="gearbox" aria-label="Gear selector">
-    <div class="gear-header">
-      <span class="engraved-title"><span data-i18n="cambio">CAMBIO</span> <em class="flourish" data-i18n="trasmissione">trasmissione</em></span>
-      <span id="gear-readout" class="gear-readout">N</span>
-    </div>
-    <div id="gearplate" class="gearplate">
-      <svg id="gate-svg" class="gate" viewBox="0 0 440 210" preserveAspectRatio="none" aria-hidden="true"></svg>
-      <!-- gear positions injected by renderer.js -->
-      <div id="shiftknob" class="shiftknob" aria-hidden="true">
-        <div class="knob-collar"></div>
-        <div class="knob-ball"></div>
-      </div>
-    </div>
-  </section>
+  <!-- ============ CENTRE CONSOLE: gear H-gate flanked by the aux controls,
+       one machined leather panel — OVERDRIVE (l) · shifter + SERVIZI (c) ·
+       OTTIMIZZA CONTESTO (r) — so it reads as one cockpit console, not three
+       separate boxes on a row. ============ -->
+  <section class="console" aria-label="Centre console">
+    <!-- slotted screws pinning the whole console to the fascia -->
+    <i class="cn-screw cn-screw--tl" aria-hidden="true"></i>
+    <i class="cn-screw cn-screw--tr" aria-hidden="true"></i>
+    <i class="cn-screw cn-screw--bl" aria-hidden="true"></i>
+    <i class="cn-screw cn-screw--br" aria-hidden="true"></i>
 
-  <!-- ============ OVERDRIVE + WIPERS + SKILL SWITCHES ============ -->
-  <section class="lower">
-    <div class="overdrive-bay">
+    <!-- LEFT rail: OVERDRIVE brass pull -->
+    <div class="console-rail overdrive-bay" aria-label="Overdrive">
       <button id="overdrive" class="overdrive" aria-label="Engage overdrive">
         <span class="od-knob">
           <span class="od-shaft"></span>
-          <span class="od-cap"><span id="od-label" class="od-cap-text">OVERDRIVE</span></span>
+          <!-- bare brass cap: the label lives only on the plate below now -->
+          <span class="od-cap"></span>
         </span>
       </button>
-      <div class="bay-plate">OVERDRIVE</div>
+      <div id="overdrive-plate" class="bay-plate">OVERDRIVE</div>
     </div>
 
-    <div class="wiper-bay" aria-label="Wiper control">
+    <!-- CENTRE: the H-gate shifter, with SERVIZI seated under the lever -->
+    <div class="console-center" aria-label="Gear selector">
+      <div class="gear-header">
+        <span class="engraved-title"><span data-i18n="cambio">CAMBIO</span> <em class="flourish" data-i18n="trasmissione">trasmissione</em></span>
+        <span id="gear-readout" class="gear-readout">N</span>
+      </div>
+      <div id="gearplate" class="gearplate">
+        <!-- slotted screws holding the machined plate to the console -->
+        <i class="gb-screw gb-screw--tl" aria-hidden="true"></i>
+        <i class="gb-screw gb-screw--tr" aria-hidden="true"></i>
+        <i class="gb-screw gb-screw--bl" aria-hidden="true"></i>
+        <i class="gb-screw gb-screw--br" aria-hidden="true"></i>
+        <svg id="gate-svg" class="gate" viewBox="0 0 460 200" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <!-- gear positions injected by renderer.js -->
+        <div id="shiftknob" class="shiftknob" aria-hidden="true">
+          <div class="knob-collar"></div>
+          <div class="knob-ball"></div>
+        </div>
+      </div>
+      <div class="switch-bank" aria-label="Skill switches">
+        <div id="switch-row" class="switch-row"><!-- toggles injected --></div>
+        <div class="bay-plate" data-i18n="servizi">SERVIZI</div>
+      </div>
+    </div>
+
+    <!-- RIGHT rail: OTTIMIZZA CONTESTO rotary wiper -->
+    <div class="console-rail wiper-bay" aria-label="Wiper control">
       <div id="wiper-control" class="wiper-control">
         <!-- position buttons injected by renderer.js -->
         <div id="wiper-knob" class="wiper-knob" aria-hidden="true">
@@ -229,11 +252,6 @@
         </div>
       </div>
       <div id="wiper-plate" class="bay-plate">OTTIMIZZA CONTESTO</div>
-    </div>
-
-    <div class="switch-bank" aria-label="Skill switches">
-      <div id="switch-row" class="switch-row"><!-- toggles injected --></div>
-      <div class="bay-plate" data-i18n="servizi">SERVIZI</div>
     </div>
   </section>
 
