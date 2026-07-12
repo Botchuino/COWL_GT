@@ -1448,6 +1448,11 @@ body.vetrina .console button { pointer-events: none; cursor: default; }
 }
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 .field-label { font-size: 12px; letter-spacing: 0.1em; color: var(--text-plate); opacity: 0.9; }
+/* A checkbox row reads across, not stacked: box then label on one line. */
+.field--check { flex-direction: row; align-items: center; gap: 9px; margin-bottom: 6px; }
+.field--check input { -webkit-app-region: no-drag; width: 16px; height: 16px; accent-color: var(--brass-1); flex: none; }
+.field--check .field-label { opacity: 1; }
+.field-hint { margin: 0 0 4px; font-size: 10px; line-height: 1.35; opacity: 0.6; }
 .field-input, .cfg-row input, .cfg-row select {
   font-family: var(--font-serif); font-size: 13px;
   padding: 7px 9px; border-radius: 5px;

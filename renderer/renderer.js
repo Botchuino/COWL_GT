@@ -37,22 +37,30 @@ const I18N = {
         strada: 'la strada', cambio: 'CAMBIO', trasmissione: 'trasmissione', servizi: 'SERVIZI',
         quadro: 'quadro strumenti', viaggio: 'in viaggio…', sosta: 'in sosta', no_signal: 'nessun segnale', wipers: 'OTTIMIZZA CONTESTO',
         tach_face: 'velocità di generazione', fuel_face: 'contesto', token_sub: 'token · in + out',
-        rpm_face: 'ragionamento', rpm_fcap: 'carico di generazione', rpm_unit: 'CARICO × 1000' },
+        rpm_face: 'ragionamento', rpm_fcap: 'carico di generazione', rpm_unit: 'CARICO × 1000',
+        safety_head: 'Sicurezze', safety_clear: 'Sicura su “clear” (FULL ottimizzazione contesto)',
+        safety_clear_hint: 'Se attiva, il tergicristallo FULL azzera il contesto solo al doppio clic.' },
   en: { riserva: 'RESERVE', motore: 'ENGINE', rotta: 'ROUTE',
         strada: 'the road', cambio: 'GEARBOX', trasmissione: 'transmission', servizi: 'SERVICES',
         quadro: 'instrument panel', viaggio: 'en route…', sosta: 'idle', no_signal: 'no signal', wipers: 'OPTIMIZE CONTEXT',
         tach_face: 'generation speed', fuel_face: 'context', token_sub: 'tokens · in + out',
-        rpm_face: 'reasoning', rpm_fcap: 'sustained gen. load', rpm_unit: 'LOAD × 1000' },
+        rpm_face: 'reasoning', rpm_fcap: 'sustained gen. load', rpm_unit: 'LOAD × 1000',
+        safety_head: 'Safety', safety_clear: 'Confirm on “clear” (FULL context optimize)',
+        safety_clear_hint: 'When on, the FULL wiper only wipes the context on a double click.' },
   pt: { riserva: 'RESERVA', motore: 'MOTOR', rotta: 'ROTA',
         strada: 'a estrada', cambio: 'CÂMBIO', trasmissione: 'transmissão', servizi: 'SERVIÇOS',
         quadro: 'painel de instrumentos', viaggio: 'a caminho…', sosta: 'parado', no_signal: 'sem sinal', wipers: 'OTIMIZAR CONTEXTO',
         tach_face: 'velocidade de geração', fuel_face: 'contexto', token_sub: 'tokens · in + out',
-        rpm_face: 'raciocínio', rpm_fcap: 'carga de geração', rpm_unit: 'CARGA × 1000' },
+        rpm_face: 'raciocínio', rpm_fcap: 'carga de geração', rpm_unit: 'CARGA × 1000',
+        safety_head: 'Seguranças', safety_clear: 'Confirmar no “clear” (FULL otimizar contexto)',
+        safety_clear_hint: 'Quando ativo, o limpador FULL só zera o contexto com duplo clique.' },
   es: { riserva: 'RESERVA', motore: 'MOTOR', rotta: 'RUTA',
         strada: 'la carretera', cambio: 'CAMBIO', trasmissione: 'transmisión', servizi: 'SERVICIOS',
         quadro: 'cuadro de instrumentos', viaggio: 'en marcha…', sosta: 'en reposo', no_signal: 'sin señal', wipers: 'OPTIMIZAR CONTEXTO',
         tach_face: 'velocidad de generación', fuel_face: 'contexto', token_sub: 'tokens · in + out',
-        rpm_face: 'razonamiento', rpm_fcap: 'carga de generación', rpm_unit: 'CARGA × 1000' },
+        rpm_face: 'razonamiento', rpm_fcap: 'carga de generación', rpm_unit: 'CARGA × 1000',
+        safety_head: 'Seguridades', safety_clear: 'Confirmar en “clear” (FULL optimizar contexto)',
+        safety_clear_hint: 'Si está activo, el limpiador FULL borra el contexto solo con doble clic.' },
 };
 let LANG = 'it';
 function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.it[key] || key; }
@@ -1193,6 +1201,17 @@ function closeConfig() {
   $('#config-scrim').classList.remove('open');
 }
 
+/* The destructive "FULL" wiper — the one that fires /clear and wipes the whole
+   context. Matched by its keystrokes so a renamed label still resolves; falls
+   back to a FULL-labelled mode, then the last mode. Returns -1 if none. */
+function clearWiperModeIndex() {
+  const modes = (CONFIG && CONFIG.wipers && Array.isArray(CONFIG.wipers.modes)) ? CONFIG.wipers.modes : [];
+  if (!modes.length) return -1;
+  let i = modes.findIndex((m) => String(m && m.keystrokes || '').trim().toLowerCase() === '/clear');
+  if (i < 0) i = modes.findIndex((m) => String(m && m.label || '').trim().toUpperCase() === 'FULL');
+  return i < 0 ? modes.length - 1 : i;
+}
+
 async function populateConfigForm() {
   if (!CONFIG) return;
   // terminal dropdown
@@ -1234,6 +1253,14 @@ async function populateConfigForm() {
       `<input data-sk="keystrokes" data-i="${i}" value="${escapeAttr(b.keystrokes || b.chord || '')}" placeholder="keystrokes / chord" aria-label="Switch ${i + 1} keystrokes"/>`;
     sc.appendChild(row);
   });
+
+  // safety: the FULL/clear wiper's double-click guard
+  const clearChk = $('#cfg-clear-confirm');
+  if (clearChk) {
+    const ci = clearWiperModeIndex();
+    clearChk.checked = ci >= 0 && !!CONFIG.wipers.modes[ci].confirm;
+    clearChk.disabled = ci < 0;
+  }
 }
 
 async function saveConfigForm() {
@@ -1256,6 +1283,17 @@ async function saveConfigForm() {
     if (k === 'keystrokes' && next.skillButtons[i].type === 'chord') next.skillButtons[i].chord = inp.value;
     else next.skillButtons[i][k] = inp.value;
   });
+
+  // safety toggle for the FULL/clear wiper — resolve against `next` so a
+  // freshly-edited modes array (should it ever change here) stays consistent
+  const clearChk = $('#cfg-clear-confirm');
+  const nextModes = next.wipers && Array.isArray(next.wipers.modes) ? next.wipers.modes : [];
+  if (clearChk && nextModes.length) {
+    let ci = nextModes.findIndex((m) => String(m && m.keystrokes || '').trim().toLowerCase() === '/clear');
+    if (ci < 0) ci = nextModes.findIndex((m) => String(m && m.label || '').trim().toUpperCase() === 'FULL');
+    if (ci < 0) ci = nextModes.length - 1;
+    nextModes[ci].confirm = clearChk.checked;
+  }
 
   const status = $('#config-status');
   try {

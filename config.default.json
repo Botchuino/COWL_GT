@@ -133,7 +133,7 @@
         "label": "FULL",
         "keystrokes": "/clear",
         "enter": true,
-        "confirm": true
+        "confirm": false
       }
     ]
   },

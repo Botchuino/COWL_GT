@@ -258,8 +258,9 @@ starting point.
   `cmd+shift+k`. Ship your own `/mycommand` or MCP triggers here.
 - **`wipers`** — the context wipers:
   - **INT** (intermittent) → `/compact` — squeegee the context down.
-  - **FULL** → `/clear` — full wash; destructive, so the UI requires a
-    **double-click to confirm**.
+  - **FULL** → `/clear` — full wash; destructive. Fires on a single click by
+    default; enable the **double-click safety** under _Garage Settings ›
+    Safety_ (per-mode `confirm` flag) to guard against an accidental wipe.
 - **`targetTerminal`** — `"auto"` picks the first running app from
   `knownTerminals`; set an exact app name (e.g. `"iTerm2"`) to force one. Also
   switchable from the UI. It must be the terminal running your Claude Code
